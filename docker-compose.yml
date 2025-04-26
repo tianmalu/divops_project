@@ -1,0 +1,27 @@
+services:
+  ai-service:
+    build: ./ai-service
+    container_name: ai-service
+    ports:
+      - "8000:8000"
+    restart: always
+    environment:
+      - OPENAI_API_KEY=xxxx  
+    volumes:
+      - ./app:/app/app
+    networks:
+      - tarot-network
+  # backend:
+    # build: ./backend
+    # container_name: backend
+    # ports:
+    #   - "8080:8080"
+    # restart: always
+    # depends_on:
+    #   - ai-service 
+    # networks:
+    #   - tarot-network
+
+networks:
+  tarot-network:
+    driver: bridge
