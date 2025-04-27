@@ -1,0 +1,16 @@
+{
+  "class": "TarotCard",
+  "description": "A card from a tarot deck",
+  "properties": [
+    {
+      "name": "name",
+      "dataType": ["text"],
+      "description": "The name of the tarot card"
+    },
+    {
+      "name": "meaning",
+      "dataType": ["text"],
+      "description": "The meaning of the tarot card"
+    }
+  ]
+}
