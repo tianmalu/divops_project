@@ -1,13 +1,13 @@
 # Weekly Project Report Template
 
-**Team Name:** The Cthulhu CI/CD Cult   
-**Date:** May 12, 2025  
+**Team Name:** Divops
+**Date:** May 13, 2025  
 **Participants:** Student1, Tutor  
 **Minute Taker:** Student1 (responsible for taking notes)
 
 | Student Name | Weekly Progress | Impediments | Promises (Next Week) | Comments |
 | :----------- | :-------------- | :---------- | :------------------- | :------- |
-| Student1     |                 |             |                      |          |
+| Tiannan Zheng     |      Setup GenAi ppl demo           |     |         Integrate Gemini for basic anwser function            |      
 | Student2     |                 |             |                      |          |
 | Student3     |                 |             |                      |          |
 
