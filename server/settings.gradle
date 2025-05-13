@@ -1,0 +1,20 @@
+pluginManagement {
+    repositories {
+        gradlePluginPortal()
+        mavenCentral()
+    }
+}
+
+dependencyResolutionManagement {
+    repositories { mavenCentral() }
+
+    /* Optional: central place for shared versions */
+    versionCatalogs {
+        libs {
+            // replace with the latest when you read this
+            version('springCloud', '2024.0.1')
+        }
+    }
+}
+
+rootProject.name = 'gateway'
