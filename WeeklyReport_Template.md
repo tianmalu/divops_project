@@ -9,7 +9,7 @@
 | :----------- | :-------------- | :---------- | :------------------- | :------- |
 | Tiannan Zheng     |      Setup GenAi ppl demo           |     |         Integrate Gemini for basic anwser function            |      
 | Mark     | Setup frontend + register/login pages | - |  Website Navigation + Connection to Backend +  |          |
-| Student3     |                 |             |                      |          |
+| Malek     | Initial Backend Setup   |   -          |   Create the first api-gateway microservice + initial auth implementation  |          |
 
 ---
 
