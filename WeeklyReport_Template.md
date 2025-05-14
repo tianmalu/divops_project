@@ -8,8 +8,8 @@
 | Student Name | Weekly Progress | Impediments | Promises (Next Week) | Comments |
 | :----------- | :-------------- | :---------- | :------------------- | :------- |
 | Tiannan Zheng     |      Setup GenAi ppl demo           |     |         Integrate Gemini for basic anwser function            |      
-| Student2     |                 |             |                      |          |
-| Student3     |                 |             |                      |          |
+| Mark     | Setup frontend + register/login pages | - |  Website Navigation + Connection to Backend +  |          |
+| Malek     | Initial Backend Setup   |   -          |   Create the first api-gateway microservice + initial auth implementation  |          |
 
 ---
 
