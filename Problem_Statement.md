@@ -10,7 +10,7 @@ Many users seek guidance or emotional insight through tarot readings, but tradit
 
 ### 🎯 What is the Main Functionality?
 
-- **Daily Tarot**: Personalized daily reading tailored to your past questions and patterns.
+- **Daily Tarot**: Personalized daily reading tailored to your past patterns.
 - **Natural Language Tarot Reading**: Users ask questions in their own words; the system responds with relevant card readings powered by GenAI.
 - **AI-Enhanced Interpretation**: Each card drawn is accompanied by a rich narrative-style explanation, tone-adapted to the user's question.
 - **User Feedback Adaptation**: The app continuously learns from feedback to refine keyword associations in the vector database.
@@ -41,8 +41,8 @@ Many users seek guidance or emotional insight through tarot readings, but tradit
 ### 📖 Example Scenarios
 
 #### 🔮 Scenario 1: Casual Daily Use
-- **User**: "How will my week go?"
-- **App**: Draws 3 cards, gives a narrative: "This week you are The Magician... A chance awaits you to use your full potential..."
+- **User**: Click the "Daily Tarot" button.
+- **App**: Draws 1 or 3 cards, gives a narrative: "Today are The Magician... A chance awaits you to use your full potential..."
 
 #### 💔 Scenario 2: Emotional Decision
 - **User**: "Should I give them another chance?"
@@ -51,6 +51,7 @@ Many users seek guidance or emotional insight through tarot readings, but tradit
 #### 📈 Scenario 3: Data-Driven Learning
 - **User**: Gives feedback: "This reading didn’t feel accurate."
 - **App**: Logs vector embedding and updates keyword weighting for future refinement.
+
 
 ---
 
