@@ -12,6 +12,7 @@ RUN pip install --no-cache-dir -r requirements.txt
 COPY app/ app/
 COPY app/tarot_prompt_template.txt app/
 
+COPY app/.env .env
 
 # Step 5: Expose the service port
 EXPOSE 8000
