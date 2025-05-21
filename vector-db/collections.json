@@ -1,0 +1,33 @@
+[
+  {
+    "class": "KeywordMeaning",
+    "description": "keyword meaning",
+    "vectorizer": "text2vec-contextionary",
+    "properties": [
+      { "name": "keyword", "dataType": ["text"] },
+      { "name": "meaning", "dataType": ["text"] },
+      { "name": "user_feedback", "dataType": ["text[]"] },
+      { "name": "source", "dataType": ["text"] },
+      { "name": "orientation", "dataType": ["text"] },           
+      { "name": "keywords", "dataType": ["text[]"] },            
+      { "name": "spread_position", "dataType": ["int"] }    
+    ]     
+  },
+  {
+    "class": "TarotCard",
+    "description": "Bsic Tarot Card Information",
+    "vectorizer": "text2vec-contextionary",
+    "properties": [
+      { "name": "name", "dataType": ["text"] },
+      { "name": "arcana", "dataType": ["text"] },
+      { "name": "suit", "dataType": ["text"] },
+      { "name": "upright_meaning", "dataType": ["text"] },
+      { "name": "reversed_meaning", "dataType": ["text"] },
+      { "name": "symbolism", "dataType": ["text"] },
+      { "name": "element", "dataType": ["text"] },
+      { "name": "astrology", "dataType": ["text"] },
+      { "name": "numerology", "dataType": ["text"] },
+      { "name": "keywords_meaning", "dataType": ["KeywordMeaning"] }
+    ]
+  }
+]
