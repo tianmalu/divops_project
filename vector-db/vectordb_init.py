@@ -44,15 +44,21 @@ if not client.collections.exists("TarotCard"):
     client.collections.create(
         name="TarotCard",
         properties=[
-            Property(name="name",            data_type=DataType.TEXT),
-            Property(name="arcana",          data_type=DataType.TEXT),
-            Property(name="suit",            data_type=DataType.TEXT),
-            Property(name="uprightMeaning",  data_type=DataType.TEXT),
-            Property(name="reversedMeaning", data_type=DataType.TEXT),
-            Property(name="symbolism",       data_type=DataType.TEXT),
-            Property(name="element",         data_type=DataType.TEXT),
-            Property(name="astrology",       data_type=DataType.TEXT),
-            Property(name="numerology",      data_type=DataType.TEXT),
+            Property(name="name", data_type=DataType.TEXT),
+            Property(name="number", data_type=DataType.TEXT),
+            Property(name="arcana", data_type=DataType.TEXT),
+            Property(name="suit", data_type=DataType.TEXT),
+            Property(name="img", data_type=DataType.TEXT),
+            Property(name="fortune_telling", data_type=DataType.TEXT_ARRAY),
+            Property(name="keywords", data_type=DataType.TEXT_ARRAY),
+            Property(name="meanings_light", data_type=DataType.TEXT_ARRAY),
+            Property(name="meanings_shadow", data_type=DataType.TEXT_ARRAY),
+            Property(name="archetype", data_type=DataType.TEXT),
+            Property(name="hebrew_alphabet", data_type=DataType.TEXT),
+            Property(name="numerology", data_type=DataType.TEXT),
+            Property(name="elemental", data_type=DataType.TEXT),
+            Property(name="mythical_spiritual", data_type=DataType.TEXT),
+            Property(name="questions_to_ask", data_type=DataType.TEXT_ARRAY)
         ],
         references=[
             ReferenceProperty(
@@ -71,25 +77,35 @@ for col_name in collections:
 
 
 # write basic data from json to the collections
-data_url = "./card_basics.json"
+data_url = "./tarot_images.json"
 with open(data_url, "r") as f:
     data = json.load(f)
-df = pd.DataFrame(data)
+
+# Check if data is wrapped in a "cards" key
+if isinstance(data, dict) and "cards" in data:
+    cards_data = data["cards"]
+else:
+    cards_data = data
 tarot_cards = client.collections.get("TarotCard")
 
 with tarot_cards.batch.fixed_size(50) as batch:
-    for i, card in tqdm(df.iterrows()):
+    for card in tqdm(cards_data):
         card_obj = {
-            "name": card["name"],
-            "arcana": card["arcana"],
-            "suit": card["suit"],
-            "uprightMeaning": card["uprightMeaning"],
-            "reversedMeaning": card["reversedMeaning"],
-            "symbolism": card["symbolism"],
-            "element": card["element"],
-            "astrology": card["astrology"],
-            "numerology": card["numerology"],
-            "keywordsMeaning": []
+            "name": card.get("name", ""),
+            "number": card.get("number", ""),
+            "arcana": card.get("arcana", ""),
+            "suit": card.get("suit", ""),
+            "img": card.get("img", ""),
+            "fortune_telling": card.get("fortune_telling", []),
+            "keywords": card.get("keywords", []),
+            "meanings_light": card.get("meanings", {}).get("light", []) if "meanings" in card else [],
+            "meanings_shadow": card.get("meanings", {}).get("shadow", []) if "meanings" in card else [],
+            "archetype": card.get("Archetype", ""),
+            "hebrew_alphabet": card.get("Hebrew Alphabet", ""),
+            "numerology": card.get("Numerology", ""),
+            "elemental": card.get("Elemental", ""),
+            "mythical_spiritual": card.get("Mythical/Spiritual", ""),
+            "questions_to_ask": card.get("Questions to Ask", [])
         }
         batch.add_object(
             properties=card_obj,
@@ -104,7 +120,7 @@ else:
 
 # Get the tarot collection
 tarot = client.collections.get("TarotCard")
-result = tarot.query.fetch_objects(limit=10)
+result = tarot.query.fetch_objects(limit=4)
 for obj in result.objects:
     print(obj.properties)
 
