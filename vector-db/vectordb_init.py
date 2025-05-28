@@ -1,7 +1,7 @@
 import weaviate
 from weaviate.classes.init import Auth
 from weaviate.classes.config import Configure
-from weaviate.classes.config import Property, DataType, ReferenceProperty
+from weaviate.classes.config import Property, DataType, ReferenceProperty, AdditionalConfig, Timeout
 
 import os
 from dotenv import load_dotenv
@@ -19,7 +19,10 @@ weaviate_api_key = os.environ["WEAVIATE_API_KEY"]
 client = weaviate.connect_to_weaviate_cloud(
     cluster_url=weaviate_url,
     auth_credentials=Auth.api_key(weaviate_api_key),
-    skip_init_checks=True
+    skip_init_checks=True,
+    additional_config=AdditionalConfig(
+        timeout=Timeout(init=30, query=60, insert=120)  # Values in seconds
+    )
 )
 
 # print(client.is_ready())
