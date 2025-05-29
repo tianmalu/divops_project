@@ -1,8 +1,8 @@
 from fastapi import FastAPI, Query, HTTPException
 from pydantic import BaseModel
-from typing import List
+from typing import List, Optional
 
-from app.rag_engine import call_gemini_api, store_feedback, build_tarot_prompt, generate_tarot_response
+from app.rag_engine import call_gemini_api, store_feedback, build_tarot_prompt
 from app.models import AskRequest, Feedback, TarotCard, KeywordMeaning
 from app.card_engine import layout_three_card
 
@@ -50,7 +50,8 @@ def fetch_full_deck() -> List[TarotCard]:
                 "img": obj.properties.get("img", ""),
                 "meanings_light": obj.properties.get("meanings_light", []),
                 "meanings_shadow": obj.properties.get("meanings_shadow", []),
-                # Add other properties as needed based on your TarotCard model
+                "keywords": obj.properties.get("keywords", []),
+                "fortune_telling": obj.properties.get("fortune_telling", []),
             }
             cards.append(TarotCard(**card_data))
         
@@ -69,14 +70,34 @@ def predict(question: str = Query(...)):
 
 # ── Scenario 1: Casual Daily Use ────────────────────────────────────────────────
 @app.get("/daily-reading")
-def daily_reading():
+def daily_reading(
+    user_id: Optional[str] = Query(None, description="Optional user identifier for tracking")
+):
     """
-    Draws a random 3-card spread and returns a tarot narrative.
+    Draws a random 3-card spread for the day and returns a tarot narrative.
+    User ID (if provided) will be recorded for analytics or history tracking.
     """
-    # call a helper that draws cards + calls Gemini under the hood:
     deck = fetch_full_deck()
     picks = layout_three_card(deck)
-    return picks
+    cards_for_display = [
+        {
+            "name":     card.name,
+            "arcana":   card.arcana,
+            "image_url":card.img,
+            "upright":  upright,
+            "position": position,
+            "position_keywords": position_keywords,
+            "meaning": meaning,
+        }
+        for card, upright, meaning, position, position_keywords in picks
+    ]
+    question = "What does my day look like?"
+    prompt = build_tarot_prompt(question, picks)
+    answer = call_gemini_api(prompt)
+    if user_id:
+        store_feedback(user_id, picks, answer)
+
+    return {"cards": cards_for_display, "answer": answer}
 
 # ── Scenario 2: Emotional Decision (custom question + spread) ─────────────────
 @app.post("/ask")
@@ -89,9 +110,11 @@ async def ask(req: AskRequest):
             "arcana":   card.arcana,
             "image_url":card.img,
             "upright":  upright,
-            "position": position
+            "position": position,
+            "position_keywords": position_keywords,
+            "meaning": meaning,
         }
-        for card, upright, meaning, position in picks
+        for card, upright, meaning, position, position_keywords in picks
     ]
     prompt = build_tarot_prompt(req.question, picks)
     answer = call_gemini_api(prompt)
@@ -103,7 +126,7 @@ async def ask(req: AskRequest):
 @app.post("/feedback")
 def submit_feedback(fb: Feedback):
     """
-    Store the user’s feedback (text +/or rating) in your RAG store.
+    Store the user's feedback (text +/or rating) in your RAG store.
     """
     store_feedback(fb.dict())
     return {"status": "ok"}
