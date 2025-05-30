@@ -42,11 +42,11 @@ Many users seek guidance or emotional insight through tarot readings, but tradit
 
 #### 🔮 Scenario 1: Casual Daily Use
 - **User**: Click the "Daily Tarot" button.
-- **App**: Draws 1 or 3 cards, gives a narrative: "Today are The Magician... A chance awaits you to use your full potential..."
+- **App**: Draws 3 cards, gives a narrative: "Today are The Magician... A chance awaits you to use your full potential..."
 
 #### 💔 Scenario 2: Emotional Decision
 - **User**: "Should I give them another chance?"
-- **App**: Pulls a reversed Lovers card, explains with AI-generated empathy: "Your heart seeks clarity, but the signs hint toward imbalance..."
+- **App**: Draw 3 cards, explains with AI-generated empathy: "Your heart seeks clarity, but the signs hint toward imbalance..."
 
 #### 📈 Scenario 3: Data-Driven Learning
 - **User**: Gives feedback: "This reading didn’t feel accurate."
