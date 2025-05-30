@@ -1,9 +1,9 @@
 fastapi
 uvicorn
 langchain
-langchain-community
 python-dotenv
 requests
 google-genai 
 google
 pydantic
+weaviate-client
