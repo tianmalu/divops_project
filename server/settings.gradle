@@ -17,4 +17,8 @@ dependencyResolutionManagement {
     }
 }
 
-rootProject.name = 'gateway'
+rootProject.name = 'divops-server'
+
+
+include 'gateway'
+include 'user-service'
