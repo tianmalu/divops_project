@@ -56,8 +56,50 @@ def fetch_full_deck() -> List[TarotCard]:
             cards.append(TarotCard(**card_data))
         
         return cards
-    finally:
-        client.close()
+    except Exception as e:
+        print(f"Error fetching deck: {e}")
+        return []
+
+def generate_daily_reading(user_id: Optional[str] = None) -> dict:
+    """
+    Generate a daily reading - standalone function for external import.
+    This function can be imported by other modules.
+    """
+    try:
+        deck = fetch_full_deck()
+        if not deck:
+            raise Exception("Failed to fetch tarot deck")
+            
+        picks = layout_three_card(deck)
+        cards_for_display = [
+            {
+                "name": card.name,
+                "arcana": card.arcana,
+                "image_url": card.img,
+                "upright": upright,
+                "position": position,
+                "position_keywords": position_keywords,
+                "meaning": meaning,
+            }
+            for card, upright, meaning, position, position_keywords in picks
+        ]
+        
+        question = "What guidance do I need for today?"
+        prompt = build_tarot_prompt(question, picks)
+        answer = call_gemini_api(prompt)
+        
+        if user_id:
+            store_feedback(user_id, picks, answer)
+
+        return {
+            "reading_type": "daily_three_card",
+            "question": question,
+            "cards": cards_for_display,
+            "answer": answer,
+            "user_id": user_id
+        }
+    except Exception as e:
+        raise Exception(f"Failed to generate daily reading: {str(e)}")
 
 # ── Main FastAPI Application ────────────────────────────────────────────────────
 app = FastAPI()
@@ -77,27 +119,12 @@ def daily_reading(
     Draws a random 3-card spread for the day and returns a tarot narrative.
     User ID (if provided) will be recorded for analytics or history tracking.
     """
-    deck = fetch_full_deck()
-    picks = layout_three_card(deck)
-    cards_for_display = [
-        {
-            "name":     card.name,
-            "arcana":   card.arcana,
-            "image_url":card.img,
-            "upright":  upright,
-            "position": position,
-            "position_keywords": position_keywords,
-            "meaning": meaning,
-        }
-        for card, upright, meaning, position, position_keywords in picks
-    ]
-    question = "What does my day look like?"
-    prompt = build_tarot_prompt(question, picks)
-    answer = call_gemini_api(prompt)
-    if user_id:
-        store_feedback(user_id, picks, answer)
-
-    return {"cards": cards_for_display, "answer": answer}
+    try:
+        result = generate_daily_reading(user_id)
+        return result
+    except Exception as e:
+        print(f"Error in daily_reading endpoint: {e}")
+        raise HTTPException(status_code=500, detail="Failed to generate daily reading")
 
 # ── Scenario 2: Emotional Decision (custom question + spread) ─────────────────
 @app.post("/ask")
