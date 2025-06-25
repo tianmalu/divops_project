@@ -378,3 +378,6 @@ sketch
 #
 # Recommended template: Node.gitignore
 .terraform/
+**/.terraform/
+**/.terraform.lock.hcl
+**/terraform.tfstate*
