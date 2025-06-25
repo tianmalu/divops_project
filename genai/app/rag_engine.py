@@ -6,6 +6,9 @@ import random
 from google import genai
 from google.genai import types
 
+from typing import List, Tuple
+from app.models import TarotCard
+from app.prompt_loader import load_tarot_template, render_prompt
 
 
 load_dotenv()
@@ -14,6 +17,10 @@ API_KEY = os.getenv("GEMINI_API_KEY")
 def check_environment_variables():
     if not API_KEY :
         raise RuntimeError("Missing GEMINI_API_KEY in environment")
+    
+def build_tarot_prompt(question: str, picks):
+    template_str = load_tarot_template()  
+    return render_prompt(template_str, question, picks)
 
 def call_gemini_api(prompt: str) -> str:
     """
@@ -40,30 +47,9 @@ def call_gemini_api(prompt: str) -> str:
         config=gen_cfg
     )
     # print("Response:", response.text)
-    return response.text
-
-def generate_tarot_response(question: str) -> str:
-    template = open("app/tarot_prompt_template.txt", "r").read()
-    prompt = PromptTemplate.from_template(template)
-    return "The cards foresee a twist of fate in your journey..."  
-
-def generate_tarot_response_test(question: str) -> str:
-    sample_responses = [
-        "The stars favor your path.",
-        "A new journey begins at dawn.",
-        "The river of fate flows with you.",
-        "Fortune smiles upon your quest.",
-    ]
-    return random.choice(sample_responses)
-
-def call_rag_with_spread(question: str, spread_size: int = 3) -> str:
-    return "The cards foresee a twist of fate in your journey..."  
+    return response.text 
 
 def store_feedback(user_id: str, question: str, feedback: str) -> None:
     # Placeholder for storing feedback
     pass
 
-
-
-if __name__ == "__main__":
-    result = call_gemini_api("Tell me a mystical tarot narrative for The Fool.")
