@@ -4,12 +4,11 @@ on:
   push:
     branches: [main]
 
-
 env:
   KUBE_NAMESPACE: client-app
   RELEASE_NAME: team-divops-client
-  HELM_CHART_PATH: ./helm/divops  # Path to your Helm chart directory
-  IMAGE_NAME: ghcr.io/aet-devops25/team-divops-client:latest
+  HELM_CHART_PATH: ./helm/divops
+  IMAGE_REPOSITORY: ghcr.io/aet-devops25/team-divops-client
 
 jobs:
   build-and-push-client-app:
@@ -30,11 +29,17 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Build client Docker image
-        run: docker build -f ./client/Dockerfile.prod -t ${{ env.IMAGE_NAME }} ./client
+      - name: Set IMAGE_TAG to short SHA
+        run: echo "IMAGE_TAG=$(echo $GITHUB_SHA | cut -c1-7)" >> $GITHUB_ENV
 
-      - name: Push client Docker image
-        run: docker push ${{ env.IMAGE_NAME }}
+      - name: Build client Docker image with both tags
+        run: docker build -f ./client/Dockerfile.prod -t ${{ env.IMAGE_REPOSITORY }}:latest -t ${{ env.IMAGE_REPOSITORY }}:${{ env.IMAGE_TAG }} ./client
+
+      - name: Push latest tag
+        run: docker push ${{ env.IMAGE_REPOSITORY }}:latest
+
+      - name: Push SHA tag
+        run: docker push ${{ env.IMAGE_REPOSITORY }}:${{ env.IMAGE_TAG }}
 
   deploy-helm:
     name: Deploy Helm Chart
@@ -54,12 +59,12 @@ jobs:
         uses: azure/setup-helm@v3
         with:
           version: 'latest'
-      
+
       - name: Create .kube directory
         run: mkdir -p $HOME/.kube
-      
+
       - name: Configure kubeconfig
         run: echo "${{ secrets.KUBECONFIG }}" > $HOME/.kube/config
 
-      - name: Deploy Helm Chart
-        run: helm upgrade --install ${{ env.RELEASE_NAME }} ${{ env.HELM_CHART_PATH }} --namespace ${{ env.KUBE_NAMESPACE }} --set client.image.repository=ghcr.io/aet-devops25/team-divops-client --set client.image.tag=latest --wait
+      - name: Deploy Helm Chart with SHA tag
+        run: helm upgrade --install ${{ env.RELEASE_NAME }} ${{ env.HELM_CHART_PATH }} --namespace ${{ env.KUBE_NAMESPACE }} --set client.image.repository=${{ env.IMAGE_REPOSITORY }} --set client.image.tag=${{ env.IMAGE_TAG }} --wait
