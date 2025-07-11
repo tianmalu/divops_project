@@ -33,7 +33,7 @@ jobs:
 
       - name: Set IMAGE_TAG to short SHA
         id: set-tag
-        run: echo "image_tag=$(echo $GITHUB_SHA | cut -c1-7)" >> $GITHUB_OUTPUT
+        run: echo "IMAGE_TAG=$(echo $GITHUB_SHA | cut -c1-7)" >> $GITHUB_OUTPUT
 
       - name: Build client Docker image with both tags
         run: docker build -f ./client/Dockerfile.prod -t ${{ env.IMAGE_REPOSITORY }}:latest -t ${{ env.IMAGE_REPOSITORY }}:${{ steps.set-tag.outputs.image_tag }} ./client
@@ -42,7 +42,7 @@ jobs:
         run: docker push ${{ env.IMAGE_REPOSITORY }}:latest
 
       - name: Push SHA tag
-        run: docker push ${{ env.IMAGE_REPOSITORY }}:${{ steps.set-tag.outputs.image_tag }}
+        run: docker push ${{ env.IMAGE_REPOSITORY }}:${{ steps.set-tag.outputs.IMAGE_TAG }}
         # run: docker push ${{ env.IMAGE_REPOSITORY }}:${{ env.IMAGE_TAG }}
 
   deploy-helm:
@@ -50,7 +50,7 @@ jobs:
     runs-on: ubuntu-latest
     needs: build-and-push-client-app
     env:
-      IMAGE_TAG: ${{ needs.build-and-push-client-app.outputs.image_tag }}
+      IMAGE_TAG: ${{ needs.build-and-push-client-app.outputs.IMAGE_TAG }}
 
     steps:
       - name: Checkout repository
@@ -73,4 +73,4 @@ jobs:
         run: echo "${{ secrets.KUBECONFIG }}" > $HOME/.kube/config
 
       - name: Deploy Helm Chart with SHA tag
-        run: helm upgrade --install $RELEASE_NAME $HELM_CHART_PATH --namespace $KUBE_NAMESPACE --set client.image.repository=$IMAGE_REPOSITORY --set client.image.tag=$IMAGE_TAG --wait
+        run: helm upgrade --install $RELEASE_NAME $HELM_CHART_PATH --namespace $KUBE_NAMESPACE --set client.image.repository=$IMAGE_REPOSITORY --set client.image.tag=$IMAGE_TAG --force --wait
