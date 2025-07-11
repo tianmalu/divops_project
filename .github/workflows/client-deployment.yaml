@@ -54,7 +54,10 @@ jobs:
         uses: azure/setup-helm@v3
         with:
           version: 'latest'
-
+      
+      - name: Create .kube directory
+        run: mkdir -p $HOME/.kube
+      
       - name: Configure kubeconfig
         run: echo "${{ secrets.KUBECONFIG }}" > $HOME/.kube/config
 
