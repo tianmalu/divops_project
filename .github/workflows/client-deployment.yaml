@@ -61,4 +61,4 @@ jobs:
         run: echo "${{ secrets.KUBECONFIG }}" > $HOME/.kube/config
 
       - name: Deploy Helm Chart
-        run: helm upgrade --install $RELEASE_NAME $HELM_CHART_PATH --namespace $KUBE_NAMESPACE --set client.image.repository=ghcr.io/aet-devops25/team-divops-client --set client.image.tag=latest --wait
+        run: helm upgrade --install ${{ env.RELEASE_NAME }} ${{ env.HELM_CHART_PATH }} --namespace ${{ env.KUBE_NAMESPACE }} --set client.image.repository=ghcr.io/aet-devops25/team-divops-client --set client.image.tag=latest --wait
