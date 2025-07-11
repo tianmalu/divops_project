@@ -36,7 +36,7 @@ const Login = () => {
     <Container size={420} my={40}>
       <form onSubmit={form.onSubmit(login)}>
         <Stack>
-          <Title ta="center">Welcome back!</Title>
+          <Title ta="center">Welcome back! Helm</Title>
 
           <Text ta="center">
             Do not have an account yet?{" "}
