@@ -18,8 +18,6 @@ jobs:
     permissions:
       contents: read
       packages: write
-    env:
-      IMAGE_NAME: ${{ env.IMAGE_NAME }}
 
     steps:
       - name: Checkout repository
@@ -33,10 +31,10 @@ jobs:
           password: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Build client Docker image
-        run: docker build -f ./client/Dockerfile.prod -t $IMAGE_NAME ./client
+        run: docker build -f ./client/Dockerfile.prod -t ${{ env.IMAGE_NAME }} ./client
 
       - name: Push client Docker image
-        run: docker push $IMAGE_NAME
+        run: docker push ${{ env.IMAGE_NAME }}
 
   deploy-helm:
     name: Deploy Helm Chart
