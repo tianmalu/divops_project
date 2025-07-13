@@ -30,6 +30,7 @@ jobs:
   build-and-push-client-app:
     name: Build and Push Client Docker Image
     runs-on: ubuntu-latest
+    needs: linting
     permissions:
       contents: read
       packages: write
