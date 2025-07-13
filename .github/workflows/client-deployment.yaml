@@ -12,6 +12,7 @@ env:
   AWS_REGION: us-east-1
 
 jobs:
+
   linting:
     name: Code Linting
     runs-on: ubuntu-latest
@@ -23,7 +24,9 @@ jobs:
         with:
           version: latest
       - name: Run Biome
+        working-directory: ./client
         run: biome ci .
+
   build-and-push-client-app:
     name: Build and Push Client Docker Image
     runs-on: ubuntu-latest
