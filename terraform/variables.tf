@@ -1,6 +1,7 @@
 variable "public_key_path" {
   description = "Path to your public SSH key"
-  default     = "~/.ssh/id_rsa.pub"
+  # default     = "~/.ssh/id_rsa.pub"
+  default = "/home/runner/.ssh/id_rsa.pub"
 }
 
 variable "ami_id" {
