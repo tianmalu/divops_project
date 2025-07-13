@@ -2,6 +2,7 @@ import { createTheme, MantineProvider } from "@mantine/core";
 import { fireEvent, render, screen } from "@testing-library/react";
 import { BrowserRouter } from "react-router-dom";
 import Login from "./Login";
+import "@testing-library/jest-dom";
 
 const theme = createTheme({});
 
