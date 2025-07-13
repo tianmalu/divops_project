@@ -11,7 +11,7 @@ const App = () => {
   return (
     <Container w={"100%"} h={"100%"}>
       <Routes>
-        <Route path="/" element={<h1>Main Page testing helm deployment</h1>} />
+        <Route path="/" element={<h1>Main Page: Deployment Working</h1>} />
         <Route path="/login" element={<Login />} />
         <Route path="/signup" element={<Signup/>} />
         <Route path="/main" element={<UserDashboard/>} />
