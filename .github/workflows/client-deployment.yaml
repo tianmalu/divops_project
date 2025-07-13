@@ -77,7 +77,7 @@ jobs:
 
   deploy-aws:
     name: Deploy To AWS EC2
-    needs: deploy-helm
+    needs: build-and-push-client-app
     runs-on: ubuntu-latest
     if: ${{ vars.RUN_AWS_DEPLOYMENT == 'true' }}
     steps:
