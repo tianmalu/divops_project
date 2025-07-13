@@ -78,7 +78,7 @@ jobs:
   deploy-aws:
     name: Deploy To AWS EC2
     runs-on: ubuntu-latest
-    if: ${{ env.RUN_AWS_DEPLOYMENT == 'true' }}
+    if: ${{ vars.RUN_AWS_DEPLOYMENT == 'true' }}
     steps:
       - name: Checkout repo
         uses: actions/checkout@v4
