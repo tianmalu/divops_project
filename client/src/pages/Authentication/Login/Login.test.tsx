@@ -1,21 +1,23 @@
-import { render, screen, fireEvent } from "@testing-library/react";
+import { createTheme, MantineProvider } from "@mantine/core";
+import { fireEvent, render, screen } from "@testing-library/react";
 import { BrowserRouter } from "react-router-dom";
 import Login from "./Login";
-import { createTheme, MantineProvider } from "@mantine/core";
 
 const theme = createTheme({});
 
 // Helper to render with router context
 const renderWithRouter = (ui: React.ReactElement) => {
-	return render(<BrowserRouter>
-		<MantineProvider
-					forceColorScheme="dark"
-					defaultColorScheme="dark"
-					theme={theme}
-				>
-					{ui}
-				</MantineProvider>
-				</BrowserRouter>);
+	return render(
+		<BrowserRouter>
+			<MantineProvider
+				forceColorScheme="dark"
+				defaultColorScheme="dark"
+				theme={theme}
+			>
+				{ui}
+			</MantineProvider>
+		</BrowserRouter>,
+	);
 };
 
 describe("Login Component", () => {
@@ -35,7 +37,7 @@ describe("Login Component", () => {
 
 	it("shows validation errors when submitting empty form", () => {
 		renderWithRouter(<Login />);
-		
+
 		fireEvent.click(screen.getByRole("button", { name: /sign in/i }));
 
 		expect(screen.getByText(/invalid email/i)).toBeInTheDocument();
