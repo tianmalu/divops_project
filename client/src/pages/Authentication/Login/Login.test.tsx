@@ -1,10 +1,21 @@
 import { render, screen, fireEvent } from "@testing-library/react";
 import { BrowserRouter } from "react-router-dom";
 import Login from "./Login";
+import { createTheme, MantineProvider } from "@mantine/core";
+
+const theme = createTheme({});
 
 // Helper to render with router context
 const renderWithRouter = (ui: React.ReactElement) => {
-	return render(<BrowserRouter>{ui}</BrowserRouter>);
+	return render(<BrowserRouter>
+		<MantineProvider
+					forceColorScheme="dark"
+					defaultColorScheme="dark"
+					theme={theme}
+				>
+					{ui}
+				</MantineProvider>
+				</BrowserRouter>);
 };
 
 describe("Login Component", () => {
