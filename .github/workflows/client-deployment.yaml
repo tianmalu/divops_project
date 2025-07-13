@@ -74,3 +74,68 @@ jobs:
 
       - name: Deploy Helm Chart with SHA tag
         run: helm upgrade --install $RELEASE_NAME $HELM_CHART_PATH --namespace $KUBE_NAMESPACE --set client.image.repository=$IMAGE_REPOSITORY --set client.image.tag=$IMAGE_TAG --force --wait
+
+  deploy-aws:
+    name: Deploy To AWS EC2
+    runs-on: ubuntu-latest
+    if: ${{ env.RUN_AWS_DEPLOYMENT == 'true' }}
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Setup SSH private key
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.AWS_EC2_SSH_PRIVATE_KEY }}" > ~/.ssh/id_rsa
+          chmod 600 ~/.ssh/id_rsa
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v2
+        with:
+          terraform_version: 1.5.6
+
+      - name: Terraform Init
+        working-directory: ./terraform
+        run: terraform init
+
+      - name: Terraform Validate
+        working-directory: ./terraform
+        run: terraform validate
+
+      - name: Terraform Plan
+        working-directory: ./terraform
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        run: terraform plan -out=tfplan
+
+      - name: Terraform Apply
+        working-directory: ./terraform
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        run: terraform apply -auto-approve tfplan
+
+      - name: Output EC2 public IP
+        working-directory: ./terraform
+        id: ec2-ip
+        run: |
+          terraform output -raw ec2_public_ip > ec2_ip.txt
+          echo "::set-output name=ec2_ip::$(cat ec2_ip.txt)"
+
+      - name: Show EC2 Public IP
+        run: echo "EC2 Public IP is ${{ steps.ec2-ip.outputs.ec2_ip }}"
+      
+      - name: Setup Ansible and run playbook
+        working-directory: ./ansible
+        run: |
+          sudo apt-get update && sudo apt-get install -y ansible
+
+          mkdir -p ~/.ssh
+          echo "${{ secrets.AWS_EC2_SSH_PRIVATE_KEY }}" > ~/.ssh/id_rsa
+          chmod 600 ~/.ssh/id_rsa
+
+          echo "[ec2]" > inventory.ini
+          echo "${{ steps.ec2-ip.outputs.ec2_ip }}" >> inventory.ini
+
+          ansible-playbook -i inventory.ini playbook.yml --private-key ~/.ssh/id_rsa -u ec2-user -o
