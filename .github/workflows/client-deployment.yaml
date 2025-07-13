@@ -12,6 +12,18 @@ env:
   AWS_REGION: us-east-1
 
 jobs:
+  linting:
+    name: Code Linting
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Setup Biome
+        uses: biomejs/setup-biome@v2
+        with:
+          version: latest
+      - name: Run Biome
+        run: biome ci .
   build-and-push-client-app:
     name: Build and Push Client Docker Image
     runs-on: ubuntu-latest
