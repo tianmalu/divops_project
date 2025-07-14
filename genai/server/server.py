@@ -9,7 +9,7 @@ sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 import uvicorn
 
-from app.main import generate_daily_reading
+from app.main import generate_daily_reading, fetch_full_deck
 from server.schemas import (
     ReadingRequest, ReadingResponse, DailyReadingRequest, 
     PredictionRequest, FeedbackRequest, ErrorResponse,
@@ -17,9 +17,6 @@ from server.schemas import (
 )
 from app.rag_engine import call_gemini_api, build_tarot_prompt
 from app.card_engine import layout_three_card
-
-from app.main import fetch_full_deck
-
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -107,7 +104,6 @@ async def custom_reading(req: ReadingRequest):
     try:
         logger.info(f"Custom reading request: {req.question[:50] if req.question else 'No question'}...")
         
-        
         deck = fetch_full_deck()
         if not deck:
             raise HTTPException(status_code=500, detail="Failed to fetch tarot deck")
@@ -151,32 +147,6 @@ async def custom_reading(req: ReadingRequest):
         logger.error(f"Custom reading failed: {e}")
         raise HTTPException(status_code=500, detail="Failed to process custom reading")
 
-@app.get("/ask-simple")
-async def ask_simple(
-    question: str = Query(..., description="Simple question for guidance"),
-    user_id: Optional[str] = Query(None, description="User ID for tracking")
-):
-    """Backward compatibility endpoint - simple question with daily reading logic."""
-    try:
-        logger.info(f"Simple ask request for user {user_id or 'anonymous'}: {question[:50]}...")
-        
-        # For backward compatibility, reuse daily reading logic
-        result = generate_daily_reading(user_id)
-        
-        # Add the original question to the response
-        result["original_question"] = question
-        result["reading_type"] = ReadingType.CUSTOM
-        
-        logger.info(f"Successfully processed simple ask request for {user_id or 'anonymous'}")
-        return result
-        
-    except ImportError as e:
-        logger.error(f"Cannot import main.py: {e}")
-        raise HTTPException(status_code=500, detail="Business logic module not available")
-    except Exception as e:
-        logger.error(f"Simple ask request failed: {e}")
-        raise HTTPException(status_code=500, detail="Failed to process simple ask request")
-
 @app.post("/feedback")
 async def submit_feedback(feedback: FeedbackRequest):
     """Submit feedback for a tarot reading."""
@@ -186,7 +156,6 @@ async def submit_feedback(feedback: FeedbackRequest):
         # Here you would implement your feedback storage logic
         # For now, just log the feedback
         logger.info(f"Feedback received - Rating: {feedback.rating}, Helpful: {feedback.helpful}")
-        logger.info(f"Question ID: {feedback.question_id}, Discussion ID: {feedback.discussion_id}")
         
         return {
             "status": "success",
