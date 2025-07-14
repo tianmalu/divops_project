@@ -8,8 +8,7 @@ from google.genai import types
 
 from typing import List, Tuple
 from app.models import TarotCard
-from app.prompt_loader import load_tarot_template, render_prompt
-
+from app.prompt_loader import load_tarot_template, render_prompt, build_tarot_prompt_smart
 
 load_dotenv()
 API_KEY = os.getenv("GEMINI_API_KEY")
@@ -21,6 +20,13 @@ def check_environment_variables():
 def build_tarot_prompt(question: str, picks):
     template_str = load_tarot_template()  
     return render_prompt(template_str, question, picks)
+
+def build_tarot_prompt_with_history(question: str, picks, history: List[dict] = None):
+    """
+    Build tarot prompt with optional conversation history.
+    Uses the smart prompt builder from prompt_loader.
+    """
+    return build_tarot_prompt_smart(question, picks, history)
 
 def call_gemini_api(prompt: str) -> str:
     """
@@ -49,7 +55,14 @@ def call_gemini_api(prompt: str) -> str:
     # print("Response:", response.text)
     return response.text 
 
+def call_gemini_api_with_history(question: str, picks, history: List[dict] = None) -> str:
+    """
+    Call the Gemini API with tarot prompt that includes conversation history.
+    This is a convenience function that combines prompt building and API calling.
+    """
+    prompt = build_tarot_prompt_with_history(question, picks, history)
+    return call_gemini_api(prompt)
+
 def store_feedback(user_id: str, question: str, feedback: str) -> None:
     # Placeholder for storing feedback
     pass
-
