@@ -52,7 +52,7 @@ def call_gemini_api(prompt: str) -> str:
 
     client = genai.Client(api_key = API_KEY)
     response = client.models.generate_content(
-        model="gemini-2.5-flash-preview-04-17",
+        model="gemini-2.5-flash",
         contents=prompt,
         config=gen_cfg
     )

@@ -1,4 +1,5 @@
 from fastapi import FastAPI, Query, HTTPException
+from fastapi.responses import JSONResponse
 from typing import Optional
 from datetime import datetime
 import logging
@@ -172,18 +173,26 @@ async def submit_feedback(feedback: FeedbackRequest):
 @app.exception_handler(422)
 async def validation_exception_handler(request, exc):
     logger.error(f"Validation error: {exc}")
-    return ErrorResponse(
+    error_response = ErrorResponse(
         error="validation_error",
         message="Invalid request data. Please check your input parameters."
+    )
+    return JSONResponse(
+        status_code=422,
+        content=error_response.dict()
     )
 
 # Error handler for general HTTP exceptions
 @app.exception_handler(HTTPException)
 async def http_exception_handler(request, exc: HTTPException):
     logger.error(f"HTTP error {exc.status_code}: {exc.detail}")
-    return ErrorResponse(
+    error_response = ErrorResponse(
         error=f"http_error_{exc.status_code}",
         message=exc.detail
+    )
+    return JSONResponse(
+        status_code=exc.status_code,
+        content=error_response.dict()
     )
 
 if __name__ == "__main__":
