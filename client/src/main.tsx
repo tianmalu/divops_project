@@ -3,19 +3,24 @@ import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 import { BrowserRouter } from "react-router";
 import App from "./App.tsx";
+import "@mantine/core/styles.css";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 
 const theme = createTheme({});
+const queryClient = new QueryClient();
 
 createRoot(document.getElementById("root")!).render(
 	<StrictMode>
-		<BrowserRouter>
-			<MantineProvider
-				forceColorScheme="dark"
-				defaultColorScheme="dark"
-				theme={theme}
-			>
-				<App />
-			</MantineProvider>
-		</BrowserRouter>
+		<QueryClientProvider client={queryClient}>
+			<BrowserRouter>
+				<MantineProvider
+					forceColorScheme="dark"
+					defaultColorScheme="dark"
+					theme={theme}
+				>
+					<App />
+				</MantineProvider>
+			</BrowserRouter>
+		</QueryClientProvider>
 	</StrictMode>,
 );
