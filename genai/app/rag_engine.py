@@ -155,19 +155,7 @@ def get_discussion(discussion_id: str, client) -> Optional[Discussion]:
             
             cards_drawn = []
             if props.get("cards_drawn"):
-                try:
-                    import json
-                    cards_data = json.loads(props.get("cards_drawn").replace("'", '"'))
-                    cards_drawn = [TarotCard(**card_data) for card_data in cards_data]
-                except Exception as e:
-                    print(f"Error parsing cards_drawn: {e}")
-                    # Fallback to eval if json fails
-                    try:
-                        cards_data = eval(props.get("cards_drawn"))
-                        cards_drawn = [TarotCard(**card_data) for card_data in cards_data]
-                    except Exception as e2:
-                        print(f"Error with eval fallback: {e2}")
-                        cards_drawn = []
+                cards_drawn = parse_cards_drawn(props.get("cards_drawn"))
             
             discussion_data = {
                 "discussion_id": props.get("discussion_id"),
@@ -329,19 +317,7 @@ def get_user_discussions_list(user_id: str, client) -> List[Discussion]:
             
             cards_drawn = []
             if props.get("cards_drawn"):
-                try:
-                    import json
-                    cards_data = json.loads(props.get("cards_drawn").replace("'", '"'))
-                    cards_drawn = [TarotCard(**card_data) for card_data in cards_data]
-                except Exception as e:
-                    print(f"Error parsing cards_drawn: {e}")
-                    # Fallback to eval if json fails
-                    try:
-                        cards_data = eval(props.get("cards_drawn"))
-                        cards_drawn = [TarotCard(**card_data) for card_data in cards_data]
-                    except Exception as e2:
-                        print(f"Error with eval fallback: {e2}")
-                        cards_drawn = []
+                cards_drawn = parse_cards_drawn(props.get("cards_drawn"))
             
             discussion_data = {
                 "discussion_id": props.get("discussion_id"),
@@ -398,3 +374,44 @@ def start_discussion(user_id: str, initial_question: str, topic: str, client) ->
     store_discussion(discussion, client)
     
     return discussion
+
+def parse_cards_drawn(cards_drawn_str: str) -> List[TarotCard]:
+    """
+    Safely parse cards_drawn from Weaviate storage format.
+    Handles JSON parsing errors, null values, and various data formats.
+    """
+    if not cards_drawn_str:
+        return []
+    
+    cards_drawn = []
+    try:
+        # First try to parse as JSON
+        # Handle null values in JSON by replacing with proper JSON null
+        cleaned_str = cards_drawn_str.replace("null", "null")  # Keep as valid JSON null
+        cards_data = json.loads(cleaned_str.replace("'", '"'))
+        
+        if isinstance(cards_data, list):
+            # Filter out null values and create TarotCard objects
+            cards_drawn = [TarotCard(**card_data) for card_data in cards_data if card_data is not None]
+        else:
+            print(f"Warning: cards_drawn is not a list: {type(cards_data)}")
+            
+    except (json.JSONDecodeError, TypeError) as e:
+        print(f"Error parsing cards_drawn as JSON: {e}")
+        # Fallback to eval if json fails
+        try:
+            # For eval, we need to handle null differently
+            eval_str = cards_drawn_str.replace("null", "None")
+            cards_data = eval(eval_str)
+            if isinstance(cards_data, list):
+                cards_drawn = [TarotCard(**card_data) for card_data in cards_data if card_data is not None]
+            else:
+                print(f"Warning: eval result is not a list: {type(cards_data)}")
+        except Exception as e2:
+            print(f"Error with eval fallback: {e2}")
+            cards_drawn = []
+    except Exception as e:
+        print(f"Unexpected error parsing cards_drawn: {e}")
+        cards_drawn = []
+    
+    return cards_drawn

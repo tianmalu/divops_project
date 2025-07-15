@@ -1,9 +1,17 @@
-from pydantic import BaseModel, Field, field_validator
+from pydantic import BaseModel, Field, field_validator, ConfigDict
 from typing import List, Optional, Dict, Any
 from enum import Enum
 import uuid
 from datetime import datetime
 import re
+import json
+
+# Global configuration for datetime serialization
+class DateTimeEncoder(json.JSONEncoder):
+    def default(self, obj):
+        if isinstance(obj, datetime):
+            return obj.isoformat()
+        return super().default(obj)
 
 # ═══════════════════════════════════════════════════════════════════════════════
 # Enums 
@@ -47,8 +55,8 @@ class ReadingRequest(BaseModel):
     question: Optional[str] = Field(None, max_length=500, description="Question to ask")
     spread_type: SpreadType = Field(SpreadType.THREE_CARD, description="Type of spread")
     user_id: Optional[str] = Field(None, description="User ID")
-    question_id: Optional[str] = Field(default_factory=lambda: str(uuid.uuid4()), description="Unique question ID")
-    discussion_id: Optional[str] = Field(default_factory=lambda: str(uuid.uuid4()), description="Discussion thread ID")
+    question_id: Optional[str] = Field(None, description="Unique question ID")
+    discussion_id: Optional[str] = Field(None, description="Discussion thread ID")
     reading_type: ReadingType = Field(ReadingType.CUSTOM, description="Type of reading")
     spread: Optional[List[Card]] = Field(None, description="Custom card spread")
     
@@ -82,6 +90,7 @@ class ReadingResponse(BaseModel):
     question_id: Optional[str] = Field(None, description="Question ID")
     discussion_id: Optional[str] = Field(None, description="Discussion thread ID")
     reading_type: ReadingType = Field(..., description="Type of reading")
+    is_followup: bool = Field(default=False, description="Whether this is a followup to an existing discussion")
     timestamp: datetime = Field(default_factory=datetime.utcnow, description="Reading timestamp")
 
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -150,6 +159,12 @@ class FeedbackRequest(BaseModel):
 # ═══════════════════════════════════════════════════════════════════════════════
 
 class ErrorResponse(BaseModel):
+    model_config = ConfigDict(
+        json_encoders={
+            datetime: lambda v: v.isoformat()
+        }
+    )
+    
     error: str = Field(..., description="Error code")
     message: str = Field(..., description="Error message")
     timestamp: datetime = Field(default_factory=datetime.utcnow, description="Error timestamp")
@@ -216,6 +231,7 @@ class QuestionResponse(BaseModel):
 class FollowupQuestionRequest(BaseModel):
     """Request to ask a followup question in an existing discussion"""
     question: str = Field(..., min_length=1, max_length=500, description="Followup question")
+    user_id: Optional[str] = Field(None, description="User ID (optional for validation)")
     
     @field_validator('question')
     @classmethod

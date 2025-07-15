@@ -32,7 +32,7 @@ class TarotCard(BaseModel):
 
 class Discussion(BaseModel):
     discussion_id: str = Field(default_factory=lambda: str(uuid.uuid4()))
-    user_id: Optional[str] = None
+    user_id: str  # Changed from Optional[str] to str (required)
     created_at: datetime = Field(default_factory=datetime.now)
     topic: Optional[str] = None
     initial_question: str

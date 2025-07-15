@@ -24,6 +24,8 @@ from app.rag_engine import (
     call_gemini_api_followup, store_followup_question
 )
 from app.card_engine import layout_three_card
+from app.main import fetch_full_deck
+from datetime import datetime
 import weaviate
 from weaviate.classes.init import Auth
 from weaviate.classes.config import Configure
@@ -119,55 +121,6 @@ async def daily_reading(
     except Exception as e:
         logger.error(f"Daily reading failed: {e}")
         raise HTTPException(status_code=500, detail="Failed to generate daily reading")
-
-@app.post("/ask")
-async def custom_reading(req: ReadingRequest):
-    """Custom tarot reading with full question_id and discussion_id support."""
-    try:
-        logger.info(f"Custom reading request: {req.question[:50] if req.question else 'No question'}...")
-        
-        deck = fetch_full_deck()
-        if not deck:
-            raise HTTPException(status_code=500, detail="Failed to fetch tarot deck")
-            
-        picks = layout_three_card(deck)
-        cards_for_display = [
-            {
-                "name": card.name,
-                "arcana": card.arcana,
-                "image_url": card.img,
-                "upright": upright,
-                "position": position,
-                "position_keywords": position_keywords,
-                "meaning": meaning,
-            }
-            for card, upright, meaning, position, position_keywords in picks
-        ]
-        
-        prompt = build_tarot_prompt(req.question or "What guidance do I need?", picks)
-        answer = call_gemini_api(prompt)
-        
-        # Create structured response using the schema
-        response = ReadingResponse(
-            cards=cards_for_display,
-            interpretation=answer,
-            question=req.question,
-            spread_type=req.spread_type,
-            user_id=req.user_id,
-            question_id=req.question_id,
-            discussion_id=req.discussion_id,
-            reading_type=req.reading_type
-        )
-        
-        logger.info(f"Successfully processed custom reading request")
-        return response
-        
-    except ImportError as e:
-        logger.error(f"Cannot import required modules: {e}")
-        raise HTTPException(status_code=500, detail="Business logic module not available")
-    except Exception as e:
-        logger.error(f"Custom reading failed: {e}")
-        raise HTTPException(status_code=500, detail="Failed to process custom reading")
 
 @app.get("/discussions/{user_id}")
 async def get_user_discussions(user_id: str):
@@ -403,9 +356,15 @@ async def validation_exception_handler(request, exc):
         error="validation_error",
         message="Invalid request data. Please check your input parameters."
     )
+    
+    # Convert to dict and manually handle datetime serialization
+    response_dict = error_response.model_dump()
+    if 'timestamp' in response_dict and isinstance(response_dict['timestamp'], datetime):
+        response_dict['timestamp'] = response_dict['timestamp'].isoformat()
+    
     return JSONResponse(
         status_code=422,
-        content=error_response.model_dump()
+        content=response_dict
     )
 
 # Error handler for general HTTP exceptions
@@ -416,9 +375,15 @@ async def http_exception_handler(request, exc: HTTPException):
         error=f"http_error_{exc.status_code}",
         message=exc.detail
     )
+    
+    # Convert to dict and manually handle datetime serialization
+    response_dict = error_response.model_dump()
+    if 'timestamp' in response_dict and isinstance(response_dict['timestamp'], datetime):
+        response_dict['timestamp'] = response_dict['timestamp'].isoformat()
+    
     return JSONResponse(
         status_code=exc.status_code,
-        content=error_response.dict()
+        content=response_dict
     )
 
 if __name__ == "__main__":
