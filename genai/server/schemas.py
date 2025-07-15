@@ -88,6 +88,36 @@ class ReadingResponse(BaseModel):
 # Discussion Models
 # ═══════════════════════════════════════════════════════════════════════════════
 
+class StartDiscussionRequest(BaseModel):
+    """Request to start a new discussion with initial question"""
+    user_id: str = Field(..., description="User ID")
+    initial_question: str = Field(..., min_length=1, max_length=500, description="Initial question to start discussion")
+    topic: str = Field(..., min_length=1, max_length=200, description="Discussion topic/title")
+    
+    @field_validator('initial_question')
+    @classmethod
+    def validate_initial_question(cls, v):
+        if len(v.strip()) == 0:
+            raise ValueError('Initial question cannot be empty')
+        return v.strip()
+    
+    @field_validator('topic')
+    @classmethod
+    def validate_topic(cls, v):
+        if len(v.strip()) == 0:
+            raise ValueError('Topic cannot be empty')
+        return v.strip()
+
+class StartDiscussionResponse(BaseModel):
+    """Response after starting a new discussion"""
+    discussion_id: str = Field(..., description="Generated discussion ID")
+    user_id: str = Field(..., description="User ID")
+    topic: str = Field(..., description="Discussion topic")
+    initial_question: str = Field(..., description="Initial question")
+    initial_response: str = Field(..., description="AI response to initial question")
+    cards_drawn: List[Dict[str, Any]] = Field(..., description="Cards drawn for this discussion")
+    created_at: datetime = Field(..., description="Discussion creation timestamp")
+
 class DiscussionMessage(BaseModel):
     message_id: str = Field(default_factory=lambda: str(uuid.uuid4()), description="Unique message ID")
     discussion_id: str = Field(..., description="Discussion thread ID")
@@ -182,3 +212,22 @@ class QuestionResponse(BaseModel):
     discussion_id: Optional[str] = Field(None, description="Associated discussion ID")
     created_at: datetime
     updated_at: Optional[datetime] = None
+
+class FollowupQuestionRequest(BaseModel):
+    """Request to ask a followup question in an existing discussion"""
+    question: str = Field(..., min_length=1, max_length=500, description="Followup question")
+    
+    @field_validator('question')
+    @classmethod
+    def validate_question(cls, v):
+        if len(v.strip()) == 0:
+            raise ValueError('Question cannot be empty')
+        return v.strip()
+
+class FollowupQuestionResponse(BaseModel):
+    """Response to a followup question"""
+    question_id: str = Field(..., description="Generated question ID")
+    discussion_id: str = Field(..., description="Discussion ID")
+    question: str = Field(..., description="Followup question")
+    response: str = Field(..., description="AI response")
+    timestamp: datetime = Field(..., description="Question timestamp")

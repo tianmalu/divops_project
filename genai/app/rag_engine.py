@@ -9,9 +9,11 @@ from google.genai import types
 from typing import List, Tuple, Optional
 from app.models import TarotCard, Discussion, FollowupQuestion
 from app.prompt_loader import load_tarot_template, render_prompt, build_tarot_prompt_smart
+from app.card_engine import layout_three_card
 import weaviate
 from weaviate.classes.query import Filter, Sort
 from datetime import datetime
+import uuid
 
 
 load_dotenv()
@@ -20,7 +22,7 @@ API_KEY = os.getenv("GEMINI_API_KEY")
 def check_environment_variables():
     if not API_KEY :
         raise RuntimeError("Missing GEMINI_API_KEY in environment")
-    
+
 def build_tarot_prompt(question: str, picks):
     template_str = load_tarot_template()  
     return render_prompt(template_str, question, picks)
@@ -71,9 +73,9 @@ def store_feedback(user_id: str, question: str, feedback: str) -> None:
     # Placeholder for storing feedback
     pass
 
-def store_discussion(discussion: Discussion):
+def store_discussion(discussion: Discussion, client) -> None:
     """
-    存储新的讨论到Weaviate
+    sture a discussion in Weaviate.
     """
     try:
         if not client.collections.exists("Discussion"):
@@ -120,16 +122,16 @@ def store_discussion(discussion: Discussion):
                 "topic": discussion.topic,
                 "initial_question": discussion.initial_question,
                 "initial_response": discussion.initial_response,
-                "cards_drawn": str([card.dict() for card in discussion.cards_drawn])
+                "cards_drawn": json.dumps([card.model_dump() for card in discussion.cards_drawn])
             }
         )
         print(f"Stored discussion: {discussion.discussion_id}")
     except Exception as e:
         print(f"Error storing discussion: {e}")
 
-def get_discussion(discussion_id: str) -> Optional[Discussion]:
+def get_discussion(discussion_id: str, client) -> Optional[Discussion]:
     """
-    根据ID获取讨论
+    Get a discussion by its ID from Weaviate.
     """
     try:
         if not client.collections.exists("Discussion"):
@@ -137,15 +139,36 @@ def get_discussion(discussion_id: str) -> Optional[Discussion]:
             
         discussion_col = client.collections.get("Discussion")
         result = discussion_col.query.fetch_objects(
-            where=Filter.by_property("discussion_id").equal(discussion_id),
-            limit=1
+            limit=100  # Reasonable limit to avoid fetching too many objects
         )
         
-        if result.objects:
-            obj = result.objects[0]
+        # Filter manually since Weaviate client doesn't support where parameter
+        found_discussion = None
+        for obj in result.objects:
+            if obj.properties.get("discussion_id") == discussion_id:
+                found_discussion = obj
+                break
+        
+        if found_discussion:
+            obj = found_discussion
             props = obj.properties
             
-            # 重新构造 Discussion 对象
+            cards_drawn = []
+            if props.get("cards_drawn"):
+                try:
+                    import json
+                    cards_data = json.loads(props.get("cards_drawn").replace("'", '"'))
+                    cards_drawn = [TarotCard(**card_data) for card_data in cards_data]
+                except Exception as e:
+                    print(f"Error parsing cards_drawn: {e}")
+                    # Fallback to eval if json fails
+                    try:
+                        cards_data = eval(props.get("cards_drawn"))
+                        cards_drawn = [TarotCard(**card_data) for card_data in cards_data]
+                    except Exception as e2:
+                        print(f"Error with eval fallback: {e2}")
+                        cards_drawn = []
+            
             discussion_data = {
                 "discussion_id": props.get("discussion_id"),
                 "user_id": props.get("user_id"),
@@ -153,7 +176,7 @@ def get_discussion(discussion_id: str) -> Optional[Discussion]:
                 "topic": props.get("topic"),
                 "initial_question": props.get("initial_question"),
                 "initial_response": props.get("initial_response"),
-                "cards_drawn": []  # 暂时为空，因为反序列化复杂
+                "cards_drawn": cards_drawn
             }
             return Discussion(**discussion_data)
         return None
@@ -161,12 +184,10 @@ def get_discussion(discussion_id: str) -> Optional[Discussion]:
         print(f"Error getting discussion: {e}")
         return None
 
-def store_followup_question(followup: FollowupQuestion):
+def store_followup_question(followup: FollowupQuestion, client) -> None:
     """
-    存储后续问题
-    """
+    Store a followup question in Weaviate."""
     try:
-        # 检查是否存在 FollowupQuestion 集合，如果不存在则创建
         if not client.collections.exists("FollowupQuestion"):
             client.collections.create(
                 name="FollowupQuestion",
@@ -190,10 +211,6 @@ def store_followup_question(followup: FollowupQuestion):
                     weaviate.classes.config.Property(
                         name="timestamp",
                         data_type=weaviate.classes.config.DataType.TEXT
-                    ),
-                    weaviate.classes.config.Property(
-                        name="cards_drawn",
-                        data_type=weaviate.classes.config.DataType.TEXT
                     )
                 ]
             )
@@ -205,17 +222,16 @@ def store_followup_question(followup: FollowupQuestion):
                 "discussion_id": followup.discussion_id,
                 "question": followup.question,
                 "response": followup.response,
-                "timestamp": followup.timestamp.isoformat(),
-                "cards_drawn": str([card.dict() for card in followup.cards_drawn] if followup.cards_drawn else [])
+                "timestamp": followup.timestamp.isoformat()
             }
         )
         print(f"Stored followup question: {followup.question_id}")
     except Exception as e:
         print(f"Error storing followup question: {e}")
 
-def get_discussion_history(discussion_id: str) -> List[FollowupQuestion]:
+def get_discussion_history(discussion_id: str, client) -> List[FollowupQuestion]:
     """
-    获取讨论的所有后续问题
+    Get the discussion history for a given discussion ID.
     """
     try:
         if not client.collections.exists("FollowupQuestion"):
@@ -223,12 +239,20 @@ def get_discussion_history(discussion_id: str) -> List[FollowupQuestion]:
             
         followup_col = client.collections.get("FollowupQuestion")
         result = followup_col.query.fetch_objects(
-            where=Filter.by_property("discussion_id").equal(discussion_id),
-            sort=Sort.by_property("timestamp", ascending=True)
+            limit=100  # Reasonable limit to avoid fetching too many objects
         )
         
-        followups = []
+        # Filter manually and sort by timestamp
+        filtered_followups = []
         for obj in result.objects:
+            if obj.properties.get("discussion_id") == discussion_id:
+                filtered_followups.append(obj)
+        
+        # Sort by timestamp
+        filtered_followups.sort(key=lambda x: x.properties.get("timestamp", ""))
+        
+        followups = []
+        for obj in filtered_followups:
             props = obj.properties
             followup_data = {
                 "question_id": props.get("question_id"),
@@ -236,7 +260,7 @@ def get_discussion_history(discussion_id: str) -> List[FollowupQuestion]:
                 "question": props.get("question"),
                 "response": props.get("response"),
                 "timestamp": datetime.fromisoformat(props.get("timestamp")),
-                "cards_drawn": []  # 暂时为空
+                "cards_drawn": []  
             }
             followups.append(FollowupQuestion(**followup_data))
         
@@ -245,35 +269,80 @@ def get_discussion_history(discussion_id: str) -> List[FollowupQuestion]:
         print(f"Error getting discussion history: {e}")
         return []
 
-def build_followup_prompt(question: str, picks, history: List[FollowupQuestion]) -> str:
-
+def build_followup_prompt(question: str, original_cards: List[TarotCard], history: List[FollowupQuestion]) -> str:
+    """
+    Build followup prompt using the original cards from the discussion.
+    """
     context = ""
     if history:
         context = "Previous conversation context:\n"
         for i, h in enumerate(history, 1):
             context += f"Q{i}: {h.question}\nA{i}: {h.response}\n\n"
     
+    # Convert TarotCard objects to picks format for build_tarot_prompt
+    # We need to simulate the picks format: (card, upright, meaning, position, position_keywords)
+    picks = []
+    positions = ["past", "present", "future"]
+    for i, card in enumerate(original_cards[:3]):  # Only take first 3 cards
+        position = positions[i] if i < len(positions) else "unknown"
+        upright = True  # Default to upright for followup questions
+        meaning = card.meanings_light if card.meanings_light else ["No meaning available"]
+        position_keywords = ["guidance", "insight", "wisdom"]
+        picks.append((card, upright, meaning, position, position_keywords))
+    
     base_prompt = build_tarot_prompt(question, picks)
     
     if context:
-        return f"{context}\nCurrent question and card reading:\n{base_prompt}"
+        return f"{context}\nCurrent question based on the same cards:\n{base_prompt}"
     else:
         return base_prompt
 
-def get_user_discussions_list(user_id: str) -> List[Discussion]:
+def call_gemini_api_followup(question: str, original_cards: List[TarotCard], history: List[FollowupQuestion] = None) -> str:
+    """
+    Call the Gemini API for followup questions using original cards from the discussion.
+    """
+    prompt = build_followup_prompt(question, original_cards, history)
+    return call_gemini_api(prompt)
+
+def get_user_discussions_list(user_id: str, client) -> List[Discussion]:
     try:
         if not client.collections.exists("Discussion"):
             return []
             
         discussion_col = client.collections.get("Discussion")
         result = discussion_col.query.fetch_objects(
-            where=Filter.by_property("user_id").equal(user_id),
-            sort=Sort.by_property("created_at", ascending=False)
+            limit=1000  # Higher limit for user discussions
         )
         
-        discussions = []
+        # Filter manually and sort by created_at
+        filtered_discussions = []
         for obj in result.objects:
+            if obj.properties.get("user_id") == user_id:
+                filtered_discussions.append(obj)
+        
+        # Sort by created_at (descending - most recent first)
+        filtered_discussions.sort(key=lambda x: x.properties.get("created_at", ""), reverse=True)
+        
+        discussions = []
+        for obj in filtered_discussions:
             props = obj.properties
+            
+            cards_drawn = []
+            if props.get("cards_drawn"):
+                try:
+                    import json
+                    cards_data = json.loads(props.get("cards_drawn").replace("'", '"'))
+                    cards_drawn = [TarotCard(**card_data) for card_data in cards_data]
+                except Exception as e:
+                    print(f"Error parsing cards_drawn: {e}")
+                    # Fallback to eval if json fails
+                    try:
+                        cards_data = eval(props.get("cards_drawn"))
+                        cards_drawn = [TarotCard(**card_data) for card_data in cards_data]
+                    except Exception as e2:
+                        print(f"Error with eval fallback: {e2}")
+                        cards_drawn = []
+            
             discussion_data = {
                 "discussion_id": props.get("discussion_id"),
                 "user_id": props.get("user_id"),
@@ -281,7 +350,7 @@ def get_user_discussions_list(user_id: str) -> List[Discussion]:
                 "topic": props.get("topic"),
                 "initial_question": props.get("initial_question"),
                 "initial_response": props.get("initial_response"),
-                "cards_drawn": []  # 暂时为空
+                "cards_drawn": cards_drawn
             }
             discussions.append(Discussion(**discussion_data))
         
@@ -289,3 +358,43 @@ def get_user_discussions_list(user_id: str) -> List[Discussion]:
     except Exception as e:
         print(f"Error getting user discussions: {e}")
         return []
+
+def start_discussion(user_id: str, initial_question: str, topic: str, client) -> Discussion:
+    """
+    Start a new discussion with initial question and draw tarot cards.
+    This function creates a new discussion, draws cards, and generates the initial response.
+    """
+    # Generate unique discussion ID
+    discussion_id = str(uuid.uuid4())
+    
+    # Fetch full deck and draw cards (only once for the entire discussion)
+    from app.main import fetch_full_deck  # Import here to avoid circular import
+    deck = fetch_full_deck()
+    if not deck:
+        raise RuntimeError("Failed to fetch tarot deck")
+    
+    # Draw cards using three-card layout
+    picks = layout_three_card(deck)
+    
+    # Extract TarotCard objects from picks
+    cards_drawn = [card for card, upright, meaning, position, position_keywords in picks]
+    
+    # Generate initial response using the drawn cards
+    prompt = build_tarot_prompt(initial_question, picks)
+    initial_response = call_gemini_api(prompt)
+    
+    # Create discussion object
+    discussion = Discussion(
+        discussion_id=discussion_id,
+        user_id=user_id,
+        created_at=datetime.now(),
+        topic=topic,
+        initial_question=initial_question,
+        initial_response=initial_response,
+        cards_drawn=cards_drawn
+    )
+    
+    # Store discussion in database
+    store_discussion(discussion, client)
+    
+    return discussion

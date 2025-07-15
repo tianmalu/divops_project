@@ -14,13 +14,34 @@ from app.main import generate_daily_reading, fetch_full_deck
 from server.schemas import (
     ReadingRequest, ReadingResponse, DailyReadingRequest, 
     PredictionRequest, FeedbackRequest, ErrorResponse,
+    StartDiscussionRequest, StartDiscussionResponse,
+    FollowupQuestionRequest, FollowupQuestionResponse,
     ReadingType, SpreadType
 )
-from app.rag_engine import call_gemini_api, build_tarot_prompt
+from app.rag_engine import (
+    call_gemini_api, build_tarot_prompt, start_discussion,
+    get_discussion, get_discussion_history, get_user_discussions_list,
+    call_gemini_api_followup, store_followup_question
+)
 from app.card_engine import layout_three_card
+import weaviate
+from weaviate.classes.init import Auth
+from weaviate.classes.config import Configure
+from weaviate.classes.config import Property, DataType, ReferenceProperty
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
+
+def get_weaviate_client():
+    """Initialize and return Weaviate client"""
+    WEAVIATE_URL = os.getenv("WEAVIATE_URL", "http://localhost:8080")
+    WEAVIATE_API_KEY = os.getenv("WEAVIATE_API_KEY", "")
+    
+    return weaviate.connect_to_weaviate_cloud(
+        cluster_url=WEAVIATE_URL,
+        auth_credentials=Auth.api_key(WEAVIATE_API_KEY),
+        skip_init_checks=True,
+    )
 
 app = FastAPI(
     title="TarotAI GenAI Service", 
@@ -148,6 +169,211 @@ async def custom_reading(req: ReadingRequest):
         logger.error(f"Custom reading failed: {e}")
         raise HTTPException(status_code=500, detail="Failed to process custom reading")
 
+@app.get("/discussions/{user_id}")
+async def get_user_discussions(user_id: str):
+    """Get all discussions for a user."""
+    try:
+        logger.info(f"Getting discussions for user: {user_id}")
+        
+        client = get_weaviate_client()
+        
+        from app.rag_engine import get_user_discussions_list
+        discussions = get_user_discussions_list(user_id, client)
+        
+        # Format discussions for response
+        discussions_response = []
+        for discussion in discussions:
+            discussions_response.append({
+                "discussion_id": discussion.discussion_id,
+                "topic": discussion.topic,
+                "initial_question": discussion.initial_question,
+                "initial_response": discussion.initial_response,
+                "created_at": discussion.created_at,
+                "cards_count": len(discussion.cards_drawn)
+            })
+        
+        logger.info(f"Found {len(discussions)} discussions for user {user_id}")
+        return {"discussions": discussions_response}
+        
+    except Exception as e:
+        logger.error(f"Failed to get discussions for user {user_id}: {e}")
+        raise HTTPException(status_code=500, detail="Failed to get discussions")
+    finally:
+        if 'client' in locals():
+            client.close()
+
+@app.get("/discussion/{discussion_id}")
+async def get_discussion_details(discussion_id: str):
+    """Get details of a specific discussion including cards and history."""
+    try:
+        logger.info(f"Getting discussion details: {discussion_id}")
+        
+        client = get_weaviate_client()
+        
+        from app.rag_engine import get_discussion, get_discussion_history
+        
+        # Get discussion
+        discussion = get_discussion(discussion_id, client)
+        if not discussion:
+            raise HTTPException(status_code=404, detail="Discussion not found")
+        
+        # Get discussion history
+        history = get_discussion_history(discussion_id, client)
+        
+        # Format cards for response
+        cards_for_display = []
+        for card in discussion.cards_drawn:
+            cards_for_display.append({
+                "name": card.name,
+                "arcana": card.arcana,
+                "image_url": card.img,
+                "keywords": card.keywords,
+                "meanings_light": card.meanings_light,
+                "meanings_shadow": card.meanings_shadow
+            })
+        
+        # Format history
+        history_response = []
+        for h in history:
+            history_response.append({
+                "question_id": h.question_id,
+                "question": h.question,
+                "response": h.response,
+                "timestamp": h.timestamp
+            })
+        
+        response = {
+            "discussion_id": discussion.discussion_id,
+            "user_id": discussion.user_id,
+            "topic": discussion.topic,
+            "initial_question": discussion.initial_question,
+            "initial_response": discussion.initial_response,
+            "cards_drawn": cards_for_display,
+            "created_at": discussion.created_at,
+            "history": history_response
+        }
+        
+        logger.info(f"Successfully retrieved discussion: {discussion_id}")
+        return response
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Failed to get discussion {discussion_id}: {e}")
+        raise HTTPException(status_code=500, detail="Failed to get discussion")
+    finally:
+        if 'client' in locals():
+            client.close()
+
+@app.post("/discussion/start")
+async def start_new_discussion(req: StartDiscussionRequest):
+    """Start a new discussion with initial question and draw tarot cards."""
+    try:
+        logger.info(f"Starting new discussion for user {req.user_id}: {req.topic}")
+        
+        client = get_weaviate_client()
+        
+        # Start discussion using the imported function
+        discussion = start_discussion(
+            user_id=req.user_id,
+            initial_question=req.initial_question,
+            topic=req.topic,
+            client=client
+        )
+        
+        # Format cards for response
+        cards_for_display = []
+        for card in discussion.cards_drawn:
+            cards_for_display.append({
+                "name": card.name,
+                "arcana": card.arcana,
+                "image_url": card.img,
+                "keywords": card.keywords,
+                "meanings_light": card.meanings_light,
+                "meanings_shadow": card.meanings_shadow
+            })
+        
+        # Create structured response
+        response = StartDiscussionResponse(
+            discussion_id=discussion.discussion_id,
+            user_id=discussion.user_id,
+            topic=discussion.topic,
+            initial_question=discussion.initial_question,
+            initial_response=discussion.initial_response,
+            cards_drawn=cards_for_display,
+            created_at=discussion.created_at
+        )
+        
+        logger.info(f"Successfully started discussion: {discussion.discussion_id}")
+        return response
+        
+    except Exception as e:
+        logger.error(f"Failed to start discussion: {e}")
+        raise HTTPException(status_code=500, detail="Failed to start discussion")
+    finally:
+        if 'client' in locals():
+            client.close()
+
+@app.post("/discussion/{discussion_id}/followup")
+async def ask_followup_question(discussion_id: str, req: FollowupQuestionRequest):
+    """Ask a followup question in an existing discussion."""
+    try:
+        logger.info(f"Followup question for discussion {discussion_id}: {req.question[:50]}...")
+        
+        client = get_weaviate_client()
+        
+        from app.rag_engine import get_discussion, get_discussion_history, call_gemini_api_followup, store_followup_question
+        from app.models import FollowupQuestion
+        import uuid
+        
+        # Get discussion to retrieve original cards
+        discussion = get_discussion(discussion_id, client)
+        if not discussion:
+            raise HTTPException(status_code=404, detail="Discussion not found")
+        
+        # Get conversation history
+        history = get_discussion_history(discussion_id, client)
+        
+        # Generate response using original cards
+        response = call_gemini_api_followup(
+            question=req.question,
+            original_cards=discussion.cards_drawn,
+            history=history
+        )
+        
+        # Create and store followup question
+        followup = FollowupQuestion(
+            question_id=str(uuid.uuid4()),
+            discussion_id=discussion_id,
+            question=req.question,
+            response=response,
+            timestamp=datetime.now(),
+            cards_drawn=[]  # Don't store new cards, use original ones
+        )
+        
+        store_followup_question(followup, client)
+        
+        # Create response
+        followup_response = FollowupQuestionResponse(
+            question_id=followup.question_id,
+            discussion_id=discussion_id,
+            question=req.question,
+            response=response,
+            timestamp=followup.timestamp
+        )
+        
+        logger.info(f"Successfully answered followup question: {followup.question_id}")
+        return followup_response
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Failed to answer followup question: {e}")
+        raise HTTPException(status_code=500, detail="Failed to answer followup question")
+    finally:
+        if 'client' in locals():
+            client.close()
+
 @app.post("/feedback")
 async def submit_feedback(feedback: FeedbackRequest):
     """Submit feedback for a tarot reading."""
@@ -179,7 +405,7 @@ async def validation_exception_handler(request, exc):
     )
     return JSONResponse(
         status_code=422,
-        content=error_response.dict()
+        content=error_response.model_dump()
     )
 
 # Error handler for general HTTP exceptions
