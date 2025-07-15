@@ -1,12 +1,18 @@
 # app/prompt_loader.py
+import os
 from string import Template
 from typing import List, Tuple
 from functools import lru_cache
 from app.models import TarotCard
 
 @lru_cache(maxsize=2)
-def load_tarot_template(path: str = "app/tarot_prompt_template.txt") -> str:
+def load_tarot_template(path: str = None) -> str:
     """Load tarot prompt template with caching"""
+    if path is None:
+        # Get the directory of this file and construct the path to the template
+        current_dir = os.path.dirname(os.path.abspath(__file__))
+        path = os.path.join(current_dir, "tarot_prompt_template.txt")
+    
     with open(path, "r", encoding="utf-8") as f:
         return f.read()
 
@@ -79,8 +85,13 @@ def render_prompt(template_str: str, question: str,
 
 
 @lru_cache(maxsize=2)
-def load_tarot_with_history_template(path: str = "app/tarot_prompt_with_history_template.txt") -> str:
+def load_tarot_with_history_template(path: str = None) -> str:
     """Load template for tarot reading with conversation history (cached)"""
+    if path is None:
+        # Get the directory of this file and construct the path to the template
+        current_dir = os.path.dirname(os.path.abspath(__file__))
+        path = os.path.join(current_dir, "tarot_prompt_with_history_template.txt")
+    
     with open(path, "r", encoding="utf-8") as f:
         return f.read()
 

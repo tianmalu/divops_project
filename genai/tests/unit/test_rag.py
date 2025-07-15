@@ -9,8 +9,8 @@ import os
 from datetime import datetime
 from unittest.mock import patch, Mock, MagicMock
 
-# Add the parent directory to the Python path
-sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+# Add the genai directory to the Python path to find app module
+sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
 
 from app.rag_engine import (
     build_tarot_prompt,

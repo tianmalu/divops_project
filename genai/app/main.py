@@ -1,18 +1,24 @@
-from fastapi import FastAPI, Query, HTTPException
-from pydantic import BaseModel
+# Standard library imports
+import os
 from typing import List, Optional
 
-from app.rag_engine import call_gemini_api, store_feedback, build_tarot_prompt
-from app.models import AskRequest, Feedback, TarotCard, KeywordMeaning
-from app.card_engine import layout_three_card
-
-import os
+# Third-party imports
+from fastapi import FastAPI, Query, HTTPException
+from pydantic import BaseModel
 from dotenv import load_dotenv
-
 import weaviate
 from weaviate.classes.init import Auth
-from weaviate.classes.config import Configure
-from weaviate.classes.config import Property, DataType, ReferenceProperty
+from weaviate.classes.config import Configure, Property, DataType, ReferenceProperty
+
+# Local imports
+from app.rag_engine import call_gemini_api, build_tarot_prompt
+from app.models import AskRequest, Feedback, TarotCard, KeywordMeaning
+from app.card_engine import layout_three_card
+from app.feedback import process_user_feedback, get_feedback_stats
+from app.logger_config import get_tarot_logger
+
+# Setup logger
+logger = get_tarot_logger(__name__)
 
 
 load_dotenv()
@@ -35,6 +41,7 @@ print("Weaviate is ready:", client.is_ready())
 
 def fetch_full_deck() -> List[TarotCard]:
     """Fetch all tarot cards from Weaviate"""
+    logger.info("Fetching full tarot deck from Weaviate")
     try:
         tarot_col = client.collections.get("TarotCard")
         
@@ -55,9 +62,10 @@ def fetch_full_deck() -> List[TarotCard]:
             }
             cards.append(TarotCard(**card_data))
         
+        logger.info(f"Successfully fetched {len(cards)} tarot cards")
         return cards
     except Exception as e:
-        print(f"Error fetching deck: {e}")
+        logger.error(f"Error fetching deck: {e}")
         return []
 
 def generate_daily_reading(user_id: Optional[str] = None) -> dict:
@@ -65,6 +73,7 @@ def generate_daily_reading(user_id: Optional[str] = None) -> dict:
     Generate a daily reading - standalone function for external import.
     This function can be imported by other modules.
     """
+    logger.info(f"Generating daily reading for user: {user_id or 'anonymous'}")
     try:
         deck = fetch_full_deck()
         if not deck:
@@ -87,9 +96,6 @@ def generate_daily_reading(user_id: Optional[str] = None) -> dict:
         question = "What guidance do I need for today?"
         prompt = build_tarot_prompt(question, picks)
         answer = call_gemini_api(prompt)
-        
-        if user_id:
-            store_feedback(user_id, picks, answer)
 
         return {
             "reading_type": "daily_three_card",
@@ -153,7 +159,28 @@ async def ask(req: AskRequest):
 @app.post("/feedback")
 def submit_feedback(fb: Feedback):
     """
-    Store the user's feedback (text +/or rating) in your RAG store.
+    Submit user feedback for a tarot reading.
+    If rating is 4/5 or above, updates KeywordMeaning for improved accuracy.
     """
-    store_feedback(fb.dict())
-    return {"status": "ok"}
+    try:
+        result = process_user_feedback(fb)
+        return result
+    except Exception as e:
+        return {
+            "status": "error",
+            "message": f"Failed to process feedback: {str(e)}"
+        }
+
+@app.get("/feedback/stats")
+def get_feedback_statistics(user_id: Optional[str] = None):
+    """
+    Get feedback statistics for analysis.
+    """
+    try:
+        stats = get_feedback_stats(user_id)
+        return stats
+    except Exception as e:
+        return {
+            "status": "error",
+            "message": f"Failed to get feedback statistics: {str(e)}"
+        }

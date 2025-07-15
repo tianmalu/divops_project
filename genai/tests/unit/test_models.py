@@ -10,7 +10,7 @@ from datetime import datetime
 from typing import List
 
 # Add the parent directory to the Python path
-sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
 
 from app.models import TarotCard, Discussion, FollowupQuestion
 

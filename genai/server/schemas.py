@@ -146,13 +146,20 @@ class DiscussionResponse(BaseModel):
 # ═══════════════════════════════════════════════════════════════════════════════
 
 class FeedbackRequest(BaseModel):
-    reading_id: str = Field(..., description="ID of the reading")
     user_id: str = Field(..., description="User ID")
-    question_id: Optional[str] = Field(None, description="Question ID")
-    discussion_id: Optional[str] = Field(None, description="Discussion thread ID")
+    question: str = Field(..., description="Original question asked")
+    spread: List[Dict[str, Any]] = Field(..., description="Cards in the spread")
+    model_response: str = Field(..., description="AI model response to the question")
     feedback_text: Optional[str] = Field(None, max_length=1000, description="Text feedback")
-    rating: Optional[int] = Field(None, ge=1, le=5, description="Rating from 1-5")
-    helpful: Optional[bool] = Field(None, description="Was the reading helpful?")
+    rating: Optional[int] = Field(None, ge=1, le=5, description="Rating from 1-5 (4+ updates KeywordMeaning)")
+    discussion_id: Optional[str] = Field(None, description="Discussion thread ID")
+    
+    @field_validator('rating')
+    @classmethod
+    def validate_rating(cls, v):
+        if v is not None and not (1 <= v <= 5):
+            raise ValueError('Rating must be between 1 and 5')
+        return v
 
 # ═══════════════════════════════════════════════════════════════════════════════
 # Error Models 

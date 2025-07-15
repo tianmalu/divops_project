@@ -8,8 +8,8 @@ import sys
 import os
 from unittest.mock import patch, Mock
 
-# Add the parent directory to the Python path
-sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+# Add the genai directory to the Python path to find app module
+sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
 
 from app.card_engine import layout_three_card, select_random_cards
 from app.models import TarotCard

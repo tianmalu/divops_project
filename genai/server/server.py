@@ -1,16 +1,25 @@
+# Standard library imports
+import json
+import logging
+import os
+import sys
+import uuid
+from contextlib import asynccontextmanager
+from datetime import datetime
+from typing import Optional
+
+# Third-party imports
+import uvicorn
+import weaviate
 from fastapi import FastAPI, Query, HTTPException
 from fastapi.responses import JSONResponse
-from typing import Optional
-from datetime import datetime
-import logging
-import sys
-import os
+from weaviate.classes.init import Auth
+from weaviate.classes.config import Configure, Property, DataType, ReferenceProperty
 
-sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-
-import uvicorn
-
+# Local imports
 from app.main import generate_daily_reading, fetch_full_deck
+from app.weaviate_client import get_weaviate_client
+from app.logger_config import get_tarot_logger
 from server.schemas import (
     ReadingRequest, ReadingResponse, DailyReadingRequest, 
     PredictionRequest, FeedbackRequest, ErrorResponse,
@@ -24,41 +33,82 @@ from app.rag_engine import (
     call_gemini_api_followup, store_followup_question
 )
 from app.card_engine import layout_three_card
-from app.main import fetch_full_deck
-from datetime import datetime
-import weaviate
-from weaviate.classes.init import Auth
-from weaviate.classes.config import Configure
-from weaviate.classes.config import Property, DataType, ReferenceProperty
+from app.context_aware_reading import ContextAwareReader, enhance_reading_with_feedback_context
+from app.models import Feedback, TarotCard, FollowupQuestion
+from app.feedback import process_user_feedback, get_feedback_stats, FeedbackProcessor
 
-logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger(__name__)
+sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-def get_weaviate_client():
-    """Initialize and return Weaviate client"""
-    WEAVIATE_URL = os.getenv("WEAVIATE_URL", "http://localhost:8080")
-    WEAVIATE_API_KEY = os.getenv("WEAVIATE_API_KEY", "")
+# Setup logger
+logger = get_tarot_logger(__name__)
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    """Lifespan event handler for FastAPI."""
+    # Startup
+    try:
+        logger.info("Initializing TarotAI server...")
+        
+        # Initialize Weaviate client and collections
+        client = get_weaviate_client()
+        initialize_feedback_collections(client)
+        
+        logger.info("TarotAI server initialized successfully")
+        
+    except Exception as e:
+        logger.error(f"Failed to initialize server: {e}")
+        raise
+    finally:
+        if 'client' in locals():
+            client.close()
     
-    return weaviate.connect_to_weaviate_cloud(
-        cluster_url=WEAVIATE_URL,
-        auth_credentials=Auth.api_key(WEAVIATE_API_KEY),
-        skip_init_checks=True,
-    )
+    yield
+    
+    # Shutdown
+    logger.info("Shutting down TarotAI server...")
 
 app = FastAPI(
     title="TarotAI GenAI Service", 
     version="1.0.0",
-    description="AI-powered tarot reading service with comprehensive reading types"
+    description="AI-powered tarot reading service with comprehensive reading types",
+    lifespan=lifespan
 )
 
 @app.get("/health")
 async def health_check():
-    return {
-        "status": "healthy", 
-        "timestamp": datetime.utcnow(), 
-        "version": "1.0.0",
-        "service": "TarotAI GenAI"
-    }
+    """Health check endpoint with feedback system status."""
+    try:
+        # Check Weaviate connection
+        client = get_weaviate_client()
+        weaviate_status = "healthy"
+        
+        # Check if feedback collections exist
+        feedback_collections = {
+            "Feedback": client.collections.exists("Feedback"),
+            "KeywordMeaning": client.collections.exists("KeywordMeaning"),
+            "ReadingContext": client.collections.exists("ReadingContext")
+        }
+        
+        client.close()
+        
+        return {
+            "status": "healthy", 
+            "timestamp": datetime.utcnow(), 
+            "version": "1.0.0",
+            "service": "TarotAI GenAI",
+            "weaviate_status": weaviate_status,
+            "feedback_collections": feedback_collections
+        }
+        
+    except Exception as e:
+        logger.error(f"Health check failed: {e}")
+        return {
+            "status": "unhealthy",
+            "timestamp": datetime.utcnow(),
+            "version": "1.0.0", 
+            "service": "TarotAI GenAI",
+            "error": str(e)
+        }
 
 @app.get("/predict")
 async def predict(
@@ -130,7 +180,6 @@ async def get_user_discussions(user_id: str):
         
         client = get_weaviate_client()
         
-        from app.rag_engine import get_user_discussions_list
         discussions = get_user_discussions_list(user_id, client)
         
         # Format discussions for response
@@ -162,8 +211,6 @@ async def get_discussion_details(discussion_id: str):
         logger.info(f"Getting discussion details: {discussion_id}")
         
         client = get_weaviate_client()
-        
-        from app.rag_engine import get_discussion, get_discussion_history
         
         # Get discussion
         discussion = get_discussion(discussion_id, client)
@@ -275,10 +322,6 @@ async def ask_followup_question(discussion_id: str, req: FollowupQuestionRequest
         
         client = get_weaviate_client()
         
-        from app.rag_engine import get_discussion, get_discussion_history, call_gemini_api_followup, store_followup_question
-        from app.models import FollowupQuestion
-        import uuid
-        
         # Get discussion to retrieve original cards
         discussion = get_discussion(discussion_id, client)
         if not discussion:
@@ -331,22 +374,304 @@ async def ask_followup_question(discussion_id: str, req: FollowupQuestionRequest
 async def submit_feedback(feedback: FeedbackRequest):
     """Submit feedback for a tarot reading."""
     try:
-        logger.info(f"Feedback submission for reading: {feedback.reading_id}")
+        logger.info(f"Feedback submission for user: {feedback.user_id}")
         
-        # Here you would implement your feedback storage logic
-        # For now, just log the feedback
-        logger.info(f"Feedback received - Rating: {feedback.rating}, Helpful: {feedback.helpful}")
+        # Convert the request to our internal Feedback model
+        # Convert spread from dict to TarotCard objects
+        tarot_cards = []
+        for card_data in feedback.spread:
+            card = TarotCard(
+                name=card_data.get("name", ""),
+                keywords=card_data.get("keywords", []),
+                meanings_light=card_data.get("meanings_light", []),
+                meanings_shadow=card_data.get("meanings_shadow", []),
+                arcana=card_data.get("arcana"),
+                number=card_data.get("number"),
+                suit=card_data.get("suit"),
+                img=card_data.get("img")
+            )
+            tarot_cards.append(card)
         
-        return {
-            "status": "success",
-            "message": "Feedback submitted successfully",
-            "reading_id": feedback.reading_id,
-            "timestamp": datetime.utcnow()
-        }
+        # Create Feedback object
+        feedback_obj = Feedback(
+            user_id=feedback.user_id,
+            question=feedback.question,
+            spread=tarot_cards,
+            model_response=feedback.model_response,
+            feedback_text=feedback.feedback_text,
+            rating=feedback.rating,
+            discussion_id=feedback.discussion_id
+        )
+        
+        # Process the feedback
+        result = process_user_feedback(feedback_obj)
+        
+        logger.info(f"Successfully processed feedback for user {feedback.user_id}")
+        return result
         
     except Exception as e:
         logger.error(f"Feedback submission failed: {e}")
-        raise HTTPException(status_code=500, detail="Failed to submit feedback")
+        raise HTTPException(status_code=500, detail=f"Failed to submit feedback: {str(e)}")
+
+@app.post("/discussion/{discussion_id}/feedback")
+async def submit_discussion_feedback(discussion_id: str, feedback_data: dict):
+    """Submit feedback for a discussion with rating and accuracy assessment."""
+    try:
+        logger.info(f"Discussion feedback submission for: {discussion_id}")
+        
+        client = get_weaviate_client()
+        
+        # Get the discussion to retrieve cards and details
+        discussion = get_discussion(discussion_id, client)
+        if not discussion:
+            raise HTTPException(status_code=404, detail="Discussion not found")
+        
+        # Create Feedback object
+        feedback = Feedback(
+            user_id=feedback_data.get("user_id", discussion.user_id),
+            question=discussion.initial_question,
+            spread=discussion.cards_drawn,
+            model_response=discussion.initial_response,
+            feedback_text=feedback_data.get("feedback_text"),
+            rating=feedback_data.get("rating"),
+            discussion_id=discussion_id
+        )
+        
+        # Process the feedback
+        result = process_user_feedback(feedback)
+        
+        logger.info(f"Successfully processed feedback for discussion {discussion_id}")
+        return result
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Discussion feedback submission failed: {e}")
+        raise HTTPException(status_code=500, detail=f"Failed to submit discussion feedback: {str(e)}")
+    finally:
+        if 'client' in locals():
+            client.close()
+
+@app.get("/feedback/stats")
+async def get_feedback_statistics(user_id: Optional[str] = Query(None, description="Optional user ID to filter statistics")):
+    """Get feedback statistics for analysis."""
+    try:
+        logger.info(f"Getting feedback statistics for user: {user_id or 'all users'}")
+        
+        stats = get_feedback_stats(user_id)
+        
+        logger.info(f"Successfully retrieved feedback statistics")
+        return stats
+        
+    except Exception as e:
+        logger.error(f"Failed to get feedback statistics: {e}")
+        raise HTTPException(status_code=500, detail=f"Failed to get feedback statistics: {str(e)}")
+
+@app.get("/feedback/discussion/{discussion_id}")
+async def get_discussion_feedback(discussion_id: str):
+    """Get feedback for a specific discussion."""
+    try:
+        logger.info(f"Getting feedback for discussion: {discussion_id}")
+        
+        client = get_weaviate_client()
+        
+        # Get feedback from Weaviate
+        collection = client.collections.get("Feedback")
+        result = collection.query.fetch_objects(
+            where=collection.query.Filter.by_property("discussion_id").equal(discussion_id),
+            limit=100
+        )
+        
+        feedback_list = []
+        for obj in result.objects:
+            feedback_list.append({
+                "user_id": obj.properties.get("user_id"),
+                "rating": obj.properties.get("rating"),
+                "feedback_text": obj.properties.get("feedback_text"),
+                "timestamp": obj.properties.get("timestamp")
+            })
+        
+        logger.info(f"Found {len(feedback_list)} feedback entries for discussion {discussion_id}")
+        return {"discussion_id": discussion_id, "feedback": feedback_list}
+        
+    except Exception as e:
+        logger.error(f"Failed to get discussion feedback: {e}")
+        raise HTTPException(status_code=500, detail=f"Failed to get discussion feedback: {str(e)}")
+    finally:
+        if 'client' in locals():
+            client.close()
+
+@app.get("/feedback/contexts/stats")
+async def get_context_statistics():
+    """Get statistics about stored reading contexts."""
+    try:
+        logger.info("Getting reading context statistics")
+        
+        reader = ContextAwareReader()
+        stats = reader.get_context_statistics()
+        reader.close()
+        
+        logger.info("Successfully retrieved context statistics")
+        return stats
+        
+    except Exception as e:
+        logger.error(f"Failed to get context statistics: {e}")
+        raise HTTPException(status_code=500, detail=f"Failed to get context statistics: {str(e)}")
+
+@app.post("/reading/enhanced")
+async def get_enhanced_reading(reading_data: dict):
+    """Get an enhanced reading that incorporates feedback context."""
+    try:
+        logger.info("Generating enhanced reading with context")
+        
+        # Extract data from request
+        question = reading_data.get("question", "")
+        base_interpretation = reading_data.get("base_interpretation", "")
+        cards_data = reading_data.get("cards", [])
+        user_id = reading_data.get("user_id")
+        
+        # Convert cards data to TarotCard objects
+        cards = []
+        for card_data in cards_data:
+            card = TarotCard(
+                name=card_data.get("name", ""),
+                keywords=card_data.get("keywords", []),
+                meanings_light=card_data.get("meanings_light", []),
+                meanings_shadow=card_data.get("meanings_shadow", []),
+                arcana=card_data.get("arcana"),
+                number=card_data.get("number"),
+                suit=card_data.get("suit"),
+                img=card_data.get("img")
+            )
+            cards.append(card)
+        
+        # Get enhanced reading
+        enhanced_result = enhance_reading_with_feedback_context(
+            question=question,
+            cards=cards,
+            base_interpretation=base_interpretation
+        )
+        
+        logger.info("Successfully generated enhanced reading")
+        return {"enhanced_interpretation": enhanced_result}
+        
+    except Exception as e:
+        logger.error(f"Failed to generate enhanced reading: {e}")
+        raise HTTPException(status_code=500, detail=f"Failed to generate enhanced reading: {str(e)}")
+
+@app.get("/feedback/contexts/similar")
+async def get_similar_contexts(
+    question: str = Query(..., description="Question to find similar contexts for"),
+    cards: str = Query(..., description="JSON string of cards with positions"),
+    limit: int = Query(5, description="Maximum number of similar contexts to return")
+):
+    """Get similar reading contexts for a given question and cards."""
+    try:
+        logger.info(f"Finding similar contexts for question: {question[:50]}...")
+        
+        # Parse cards from JSON string
+        try:
+            cards_data = json.loads(cards)
+        except json.JSONDecodeError:
+            raise HTTPException(status_code=400, detail="Invalid JSON format for cards parameter")
+        
+        # Convert to expected format
+        cards_in_positions = []
+        for i, card_data in enumerate(cards_data):
+            cards_in_positions.append({
+                "position": i,
+                "card_name": card_data.get("name", "")
+            })
+        
+        # Initialize feedback processor and reader
+        feedback_processor = FeedbackProcessor()
+        reader = ContextAwareReader(feedback_processor)
+        
+        try:
+            similar_contexts = feedback_processor.get_similar_reading_contexts(
+                question=question,
+                cards=cards_data,  # Pass the original cards data
+                limit=limit
+            )
+            
+            logger.info(f"Found {len(similar_contexts)} similar contexts")
+            return {
+                "similar_contexts": similar_contexts,
+                "total_found": len(similar_contexts),
+                "query_question": question,
+                "query_cards": cards_in_positions
+            }
+            
+        finally:
+            reader.close()
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Failed to get similar contexts: {e}")
+        raise HTTPException(status_code=500, detail=f"Failed to get similar contexts: {str(e)}")
+        
+def initialize_feedback_collections(client):
+    """Initialize Weaviate collections for feedback system."""
+    try:
+        # Create Feedback collection if it doesn't exist
+        if not client.collections.exists("Feedback"):
+            client.collections.create(
+                name="Feedback",
+                properties=[
+                    Property(name="user_id", data_type=DataType.TEXT),
+                    Property(name="question", data_type=DataType.TEXT),
+                    Property(name="model_response", data_type=DataType.TEXT),
+                    Property(name="feedback_text", data_type=DataType.TEXT),
+                    Property(name="rating", data_type=DataType.INT),
+                    Property(name="discussion_id", data_type=DataType.TEXT),
+                    Property(name="timestamp", data_type=DataType.TEXT),
+                    Property(name="cards_drawn", data_type=DataType.TEXT)
+                ]
+            )
+            logger.info("Created Feedback collection")
+        
+        # Create KeywordMeaning collection if it doesn't exist
+        if not client.collections.exists("KeywordMeaning"):
+            client.collections.create(
+                name="KeywordMeaning",
+                properties=[
+                    Property(name="keyword", data_type=DataType.TEXT),
+                    Property(name="meaning", data_type=DataType.TEXT),
+                    Property(name="feedback", data_type=DataType.TEXT),
+                    Property(name="source", data_type=DataType.TEXT),
+                    Property(name="orientation", data_type=DataType.TEXT),
+                    Property(name="position", data_type=DataType.INT),
+                    Property(name="card_name", data_type=DataType.TEXT),
+                    Property(name="created_at", data_type=DataType.TEXT),
+                    Property(name="updated_at", data_type=DataType.TEXT)
+                ]
+            )
+            logger.info("Created KeywordMeaning collection")
+        
+        # Create ReadingContext collection if it doesn't exist
+        if not client.collections.exists("ReadingContext"):
+            client.collections.create(
+                name="ReadingContext",
+                properties=[
+                    Property(name="question", data_type=DataType.TEXT),
+                    Property(name="model_response", data_type=DataType.TEXT),
+                    Property(name="user_feedback", data_type=DataType.TEXT),
+                    Property(name="rating", data_type=DataType.INT),
+                    Property(name="user_id", data_type=DataType.TEXT),
+                    Property(name="discussion_id", data_type=DataType.TEXT),
+                    Property(name="timestamp", data_type=DataType.TEXT),
+                    Property(name="spread_info", data_type=DataType.TEXT),
+                    Property(name="total_cards", data_type=DataType.INT),
+                    Property(name="question_type", data_type=DataType.TEXT),
+                    Property(name="source", data_type=DataType.TEXT)
+                ]
+            )
+            logger.info("Created ReadingContext collection")
+            
+    except Exception as e:
+        logger.error(f"Failed to initialize feedback collections: {e}")
+        raise
 
 # Error handler for validation errors
 @app.exception_handler(422)

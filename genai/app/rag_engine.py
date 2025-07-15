@@ -1,19 +1,27 @@
+# Standard library imports
+import json
+import os
+import random
+import uuid
+from datetime import datetime
+from typing import List, Tuple, Optional
+
+# Third-party imports
 from langchain.prompts import PromptTemplate
 from dotenv import load_dotenv
-import os
-import json
-import random
 from google import genai
 from google.genai import types
+import weaviate
+from weaviate.classes.query import Filter, Sort
 
-from typing import List, Tuple, Optional
+# Local imports
 from app.models import TarotCard, Discussion, FollowupQuestion
 from app.prompt_loader import load_tarot_template, render_prompt, build_tarot_prompt_smart
 from app.card_engine import layout_three_card
-import weaviate
-from weaviate.classes.query import Filter, Sort
-from datetime import datetime
-import uuid
+from app.logger_config import get_tarot_logger
+
+# Setup logger
+logger = get_tarot_logger(__name__)
 
 
 load_dotenv()
@@ -38,28 +46,36 @@ def call_gemini_api(prompt: str) -> str:
     """
     Call the Gemini API with the provided prompt and return the response.
     """
+    logger.info("Calling Gemini API for content generation")
     check_environment_variables()
-    # Load the configuration from the JSON file
-    with open(os.path.join(os.path.dirname(__file__), "gemini_config.json"), "r", encoding="utf-8") as f:
-        cfg = json.load(f)
+    
+    try:
+        # Load the configuration from the JSON file
+        with open(os.path.join(os.path.dirname(__file__), "gemini_config.json"), "r", encoding="utf-8") as f:
+            cfg = json.load(f)
 
-    gen_cfg = types.GenerationConfig(**cfg["generation_config"])
-    safe_cfg = [types.SafetySetting(**s) for s in cfg["safety_settings"]]
+        gen_cfg = types.GenerationConfig(**cfg["generation_config"])
+        safe_cfg = [types.SafetySetting(**s) for s in cfg["safety_settings"]]
 
-    gen_cfg = types.GenerateContentConfig(
-        **cfg["generation_config"],
-        safety_settings=safe_cfg,
-        automatic_function_calling=types.AutomaticFunctionCallingConfig(disable=True)
-    )
+        gen_cfg = types.GenerateContentConfig(
+            **cfg["generation_config"],
+            safety_settings=safe_cfg,
+            automatic_function_calling=types.AutomaticFunctionCallingConfig(disable=True)
+        )
 
-    client = genai.Client(api_key = API_KEY)
-    response = client.models.generate_content(
-        model="gemini-2.5-flash",
-        contents=prompt,
-        config=gen_cfg
-    )
-    # print("Response:", response.text)
-    return response.text 
+        client = genai.Client(api_key = API_KEY)
+        response = client.models.generate_content(
+            model="gemini-2.5-flash",
+            contents=prompt,
+            config=gen_cfg
+        )
+        
+        logger.info(f"Successfully generated content with Gemini API (response length: {len(response.text) if response.text else 0} characters)")
+        return response.text
+        
+    except Exception as e:
+        logger.error(f"Error calling Gemini API: {e}")
+        raise 
 
 def call_gemini_api_with_history(question: str, picks, history: List[dict] = None) -> str:
     """
@@ -338,26 +354,78 @@ def get_user_discussions_list(user_id: str, client) -> List[Discussion]:
 def start_discussion(user_id: str, initial_question: str, topic: str, client) -> Discussion:
     """
     Start a new discussion with initial question and draw tarot cards.
-    This function creates a new discussion, draws cards, and generates the initial response.
+    This function creates a new discussion, draws cards, generates the initial response,
+    and enhances it with feedback context from similar past readings.
     """
+    logger.info(f"Starting new discussion for user {user_id}: {topic}")
+    
     # Generate unique discussion ID
     discussion_id = str(uuid.uuid4())
+    logger.debug(f"Generated discussion ID: {discussion_id}")
     
     # Fetch full deck and draw cards (only once for the entire discussion)
     from app.main import fetch_full_deck  # Import here to avoid circular import
     deck = fetch_full_deck()
     if not deck:
+        logger.error("Failed to fetch tarot deck")
         raise RuntimeError("Failed to fetch tarot deck")
+    
+    logger.info(f"Fetched deck with {len(deck)} cards")
     
     # Draw cards using three-card layout
     picks = layout_three_card(deck)
+    logger.info(f"Drew {len(picks)} cards for reading")
     
     # Extract TarotCard objects from picks
     cards_drawn = [card for card, upright, meaning, position, position_keywords in picks]
+    logger.debug(f"Cards drawn: {[card.name for card in cards_drawn]}")
     
     # Generate initial response using the drawn cards
     prompt = build_tarot_prompt(initial_question, picks)
-    initial_response = call_gemini_api(prompt)
+    logger.debug(f"Generated prompt length: {len(prompt)} characters")
+    
+    base_response = call_gemini_api(prompt)
+    logger.info(f"Generated base response length: {len(base_response) if base_response else 0} characters")
+    
+    # Ensure base_response is not None or empty
+    if not base_response:
+        base_response = "I apologize, but I was unable to generate a reading at this time. Please try again."
+        logger.warning("Using fallback response due to empty base_response")
+    
+    # Enhance the response with feedback context
+    try:
+        logger.info("Attempting to enhance response with feedback context")
+        from app.context_aware_reading import enhance_reading_with_feedback_context
+        
+        # Enhance the response with context
+        enhanced_result = enhance_reading_with_feedback_context(
+            question=initial_question,
+            cards=cards_drawn,
+            base_interpretation=base_response
+        )
+        
+        # Extract the enhanced interpretation
+        initial_response = enhanced_result.get("enhanced_interpretation", base_response)
+        
+        # Check if enhancement was applied
+        if "Context Enhancement" in initial_response:
+            logger.info(f"Enhanced discussion response with feedback context for user {user_id}")
+        else:
+            logger.info("No context enhancement applied to response")
+        
+        # Log context statistics
+        contexts_count = enhanced_result.get("similar_contexts_count", 0)
+        confidence_boost = enhanced_result.get("confidence_boost", 0)
+        logger.info(f"Context enhancement - Similar contexts: {contexts_count}, Confidence boost: {confidence_boost}")
+        
+    except Exception as e:
+        logger.warning(f"Could not enhance response with context: {e}")
+        # Fall back to base response
+        initial_response = base_response
+    
+    # Final safety check to ensure initial_response is not None
+    if not initial_response:
+        initial_response = "I apologize, but I was unable to generate a reading at this time. Please try again."
     
     # Create discussion object
     discussion = Discussion(

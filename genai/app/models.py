@@ -64,5 +64,13 @@ class Feedback(BaseModel):
     spread: List[TarotCard]
     model_response: str
     feedback_text: Optional[str] = None
-    rating: Optional[int] = None  # e.g. 1–5
-    discussion_id: Optional[str] = None  
+    rating: Optional[int] = Field(None, ge=1, le=5, description="Rating from 1 to 5, where 4-5 triggers KeywordMeaning update")
+    discussion_id: Optional[str] = None
+    timestamp: datetime = Field(default_factory=datetime.now)
+    
+    def model_dump(self, **kwargs):
+        """Override model_dump to handle datetime serialization."""
+        data = super().model_dump(**kwargs)
+        if isinstance(data.get('timestamp'), datetime):
+            data['timestamp'] = data['timestamp'].isoformat()
+        return data  

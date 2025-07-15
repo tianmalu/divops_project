@@ -8,8 +8,8 @@ import sys
 import os
 from datetime import datetime
 
-# Add the parent directory to the Python path
-sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+# Add the genai directory to the Python path to find app module
+sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
 
 def run_all_tests():
     """Run all test suites"""
