@@ -165,7 +165,7 @@ const DiscussionMessages = () => {
 				{messages.map((m) => {
 					return <Message key={m.id} message={m} />;
 				})}
-				<Loader type="dots"/>
+				<Loader type="dots" />
 			</Box>
 			<Stack flex={1}>
 				<Group grow mb="xs">
