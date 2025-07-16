@@ -36,6 +36,8 @@ from app.card_engine import layout_three_card
 from app.context_aware_reading import ContextAwareReader, enhance_reading_with_feedback_context
 from app.models import Feedback, TarotCard, FollowupQuestion
 from app.feedback import process_user_feedback, get_feedback_stats, FeedbackProcessor
+from app.main import generate_daily_reading, generate_ask_reading
+
 
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 

@@ -5,6 +5,7 @@ Test script to verify ErrorResponse JSON serialization
 import json
 from datetime import datetime
 from typing import Dict, Any
+import unittest
 
 # Mock Pydantic classes for testing
 class MockField:
@@ -35,39 +36,25 @@ class ErrorResponse(MockBaseModel):
             timestamp = datetime.utcnow()
         super().__init__(error=error, message=message, timestamp=timestamp)
 
-def test_error_response_serialization():
-    print("Testing ErrorResponse JSON serialization...")
-    
-    # Create an ErrorResponse instance
-    error_response = ErrorResponse(
-        error="http_error_404",
-        message="Discussion not found"
-    )
-    
-    # Test model_dump()
-    response_dict = error_response.model_dump()
-    print(f"model_dump() result: {response_dict}")
-    
-    # Test manual datetime serialization
-    if 'timestamp' in response_dict and isinstance(response_dict['timestamp'], datetime):
-        response_dict['timestamp'] = response_dict['timestamp'].isoformat()
-    
-    print(f"After manual datetime conversion: {response_dict}")
-    
-    # Test JSON serialization
-    try:
-        json_str = json.dumps(response_dict)
-        print(f"JSON serialization successful: {json_str}")
-        
-        # Test deserialization
-        deserialized = json.loads(json_str)
-        print(f"JSON deserialization successful: {deserialized}")
-        
-        print("✅ All tests passed!")
-        return True
-    except Exception as e:
-        print(f"❌ JSON serialization failed: {e}")
-        return False
+class TestErrorResponse(unittest.TestCase):
+    def test_error_response_serialization(self):
+        error_response = ErrorResponse(
+            error="http_error_404",
+            message="Discussion not found"
+        )
+        response_dict = error_response.model_dump()
+        # Manual datetime serialization
+        if 'timestamp' in response_dict and isinstance(response_dict['timestamp'], datetime):
+            response_dict['timestamp'] = response_dict['timestamp'].isoformat()
+        # Test JSON serialization
+        try:
+            json_str = json.dumps(response_dict)
+            deserialized = json.loads(json_str)
+            self.assertEqual(deserialized["error"], "http_error_404")
+            self.assertEqual(deserialized["message"], "Discussion not found")
+            self.assertIn("timestamp", deserialized)
+        except Exception as e:
+            self.fail(f"JSON serialization failed: {e}")
 
 if __name__ == "__main__":
-    test_error_response_serialization()
+    unittest.main()

@@ -8,6 +8,7 @@ import sys
 import os
 from datetime import datetime
 from unittest.mock import patch, Mock, MagicMock
+import unittest
 
 # Add the genai directory to the Python path to find app module
 sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
@@ -27,10 +28,9 @@ from app.rag_engine import (
 )
 from app.models import TarotCard, Discussion, FollowupQuestion
 
-class TestRAGEngine:
+class TestRAGEngine(unittest.TestCase):
     """Test suite for RAG engine functionality"""
-    
-    def setup_method(self):
+    def setUp(self):
         """Setup test data"""
         self.sample_card = TarotCard(
             name="The Fool",
@@ -78,10 +78,10 @@ class TestRAGEngine:
             
             result = build_tarot_prompt(question, self.sample_picks)
             
-            assert result == "Rendered prompt with cards"
+            self.assertEqual(result, "Rendered prompt with cards")
             mock_template.assert_called_once()
             mock_render.assert_called_once_with("Question: {question}\nCards: {cards_section}", question, self.sample_picks)
-            print("✓ Basic tarot prompt building test passed")
+            print("\u2713 Basic tarot prompt building test passed")
 
     def test_build_tarot_prompt_with_history_no_history(self):
         """Test tarot prompt building without history"""
@@ -92,7 +92,7 @@ class TestRAGEngine:
             
             result = build_tarot_prompt_with_history(question, self.sample_picks)
             
-            assert result == "Smart prompt without history"
+            self.assertEqual(result, "Smart prompt without history")
             mock_smart_prompt.assert_called_once_with(question, self.sample_picks, None)
             print("✓ Tarot prompt building without history test passed")
 
@@ -109,28 +109,26 @@ class TestRAGEngine:
             
             result = build_tarot_prompt_with_history(question, self.sample_picks, history)
             
-            assert result == "Smart prompt with history"
+            self.assertEqual(result, "Smart prompt with history")
             mock_smart_prompt.assert_called_once_with(question, self.sample_picks, history)
             print("✓ Tarot prompt building with history test passed")
 
     def test_call_gemini_api_success(self):
         """Test successful Gemini API call"""
         prompt = "What does The Fool card mean?"
-        
+        # Use unittest.mock.mock_open for context manager support
+        from unittest.mock import mock_open as std_mock_open
         with patch('app.rag_engine.check_environment_variables') as mock_check, \
-             patch('builtins.open', mock_open(read_data='{"generation_config": {"temperature": 0.7}, "safety_settings": []}')), \
+             patch('builtins.open', std_mock_open(read_data='{"generation_config": {"temperature": 0.7}, "safety_settings": []}')), \
              patch('app.rag_engine.genai') as mock_genai:
-            
             mock_check.return_value = None
             mock_client = Mock()
             mock_genai.Client.return_value = mock_client
             mock_client.models.generate_content.return_value = Mock(text="The Fool represents new beginnings...")
-            
             result = call_gemini_api(prompt)
-            
-            assert result == "The Fool represents new beginnings..."
+            self.assertEqual(result, "The Fool represents new beginnings...")
             mock_check.assert_called_once()
-            print("✓ Successful Gemini API call test passed")
+            print("\u2713 Successful Gemini API call test passed")
 
     def test_call_gemini_api_environment_error(self):
         """Test Gemini API call with environment error"""
@@ -141,9 +139,9 @@ class TestRAGEngine:
             
             try:
                 result = call_gemini_api(prompt)
-                assert False, "Should have raised RuntimeError"
+                self.assertFalse(True, "Should have raised RuntimeError")
             except RuntimeError as e:
-                assert "GEMINI_API_KEY" in str(e)
+                self.assertIn("GEMINI_API_KEY", str(e))
                 print("✓ Environment error handling test passed")
 
     def test_call_gemini_api_config_error(self):
@@ -157,7 +155,7 @@ class TestRAGEngine:
             
             try:
                 result = call_gemini_api(prompt)
-                assert False, "Should have raised FileNotFoundError"
+                self.assertFalse(True, "Should have raised FileNotFoundError")
             except FileNotFoundError:
                 print("✓ Config file error handling test passed")
 
@@ -169,26 +167,24 @@ class TestRAGEngine:
         
         result = build_followup_prompt(question, original_cards, history)
         
-        assert isinstance(result, str)
-        assert question in result
-        assert "The Fool" in result
-        assert "original cards" in result.lower() or "cards drawn" in result.lower()
-        print("✓ Followup prompt building test passed")
+        self.assertIsInstance(result, str)
+        self.assertIn(question, result)
+        self.assertIn("The Fool", result)
+        # Remove assertion for 'cards drawn' since actual output uses 'drawn cards and their interpretations'
+        self.assertIn("drawn cards", result.lower())
+        print("\u2713 Followup prompt building test passed")
 
     def test_start_discussion(self):
         """Test starting a new discussion"""
-        with patch('app.rag_engine.fetch_full_deck') as mock_fetch_deck, \
-             patch('app.rag_engine.layout_three_card') as mock_layout, \
+        # Only patch attributes that exist in rag_engine
+        with patch('app.rag_engine.layout_three_card') as mock_layout, \
              patch('app.rag_engine.build_tarot_prompt') as mock_build_prompt, \
              patch('app.rag_engine.call_gemini_api') as mock_gemini, \
              patch('app.rag_engine.store_discussion') as mock_store:
-            
-            mock_fetch_deck.return_value = [self.sample_card]
             mock_layout.return_value = self.sample_picks
             mock_build_prompt.return_value = "Tarot prompt"
             mock_gemini.return_value = "AI response"
             mock_store.return_value = None
-            
             mock_client = Mock()
             
             result = start_discussion(
@@ -198,12 +194,12 @@ class TestRAGEngine:
                 client=mock_client
             )
             
-            assert isinstance(result, Discussion)
-            assert result.user_id == "test_user"
-            assert result.initial_question == "Will I find love?"
-            assert result.topic == "Love"
-            assert result.initial_response == "AI response"
-            print("✓ Start discussion test passed")
+            self.assertIsInstance(result, Discussion)
+            self.assertEqual(result.user_id, "test_user")
+            self.assertEqual(result.initial_question, "Will I find love?")
+            self.assertEqual(result.topic, "Love")
+            self.assertEqual(result.initial_response, "AI response")
+            print("\u2713 Start discussion test passed")
 
     def test_get_discussion_found(self):
         """Test getting an existing discussion"""
@@ -230,9 +226,9 @@ class TestRAGEngine:
             
             result = get_discussion("test_discussion_123", mock_client)
             
-            assert isinstance(result, Discussion)
-            assert result.discussion_id == "test_discussion_123"
-            assert result.user_id == "test_user_456"
+            self.assertIsInstance(result, Discussion)
+            self.assertEqual(result.discussion_id, "test_discussion_123")
+            self.assertEqual(result.user_id, "test_user_456")
             print("✓ Get discussion found test passed")
 
     def test_get_discussion_not_found(self):
@@ -245,7 +241,7 @@ class TestRAGEngine:
         
         result = get_discussion("nonexistent_id", mock_client)
         
-        assert result is None
+        self.assertIsNone(result)
         print("✓ Get discussion not found test passed")
 
     def test_get_discussion_history(self):
@@ -268,10 +264,10 @@ class TestRAGEngine:
         
         result = get_discussion_history("test_discussion_123", mock_client)
         
-        assert isinstance(result, list)
-        assert len(result) == 1
-        assert isinstance(result[0], FollowupQuestion)
-        assert result[0].question_id == "test_question_789"
+        self.assertIsInstance(result, list)
+        self.assertEqual(len(result), 1)
+        self.assertIsInstance(result[0], FollowupQuestion)
+        self.assertEqual(result[0].question_id, "test_question_789")
         print("✓ Get discussion history test passed")
 
     def test_get_user_discussions_list(self):
@@ -299,10 +295,10 @@ class TestRAGEngine:
             
             result = get_user_discussions_list("test_user_456", mock_client)
             
-            assert isinstance(result, list)
-            assert len(result) == 1
-            assert isinstance(result[0], Discussion)
-            assert result[0].user_id == "test_user_456"
+            self.assertIsInstance(result, list)
+            self.assertEqual(len(result), 1)
+            self.assertIsInstance(result[0], Discussion)
+            self.assertEqual(result[0].user_id, "test_user_456")
             print("✓ Get user discussions list test passed")
 
     def test_store_discussion(self):
@@ -345,7 +341,7 @@ class TestRAGEngine:
             
             result = call_gemini_api_followup(question, original_cards, history)
             
-            assert result == "Followup response"
+            self.assertEqual(result, "Followup response")
             mock_build_prompt.assert_called_once_with(question, original_cards, history)
             mock_gemini.assert_called_once_with("Followup prompt")
             print("✓ Gemini API followup call test passed")
@@ -356,7 +352,7 @@ class TestRAGEngine:
         mock_client.collections.exists.side_effect = Exception("Connection error")
         
         result = get_discussion("test_id", mock_client)
-        assert result is None
+        self.assertIsNone(result)
         print("✓ Client connection error handling test passed")
 
     def test_error_handling_invalid_data(self):
@@ -383,55 +379,16 @@ class TestRAGEngine:
 
 def run_all_tests():
     """Run all RAG engine tests"""
-    test_instance = TestRAGEngine()
-    
-    print("=== RAG Engine Tests ===\n")
-    
-    test_methods = [
-        test_instance.test_build_tarot_prompt_basic,
-        test_instance.test_build_tarot_prompt_with_history_no_history,
-        test_instance.test_build_tarot_prompt_with_history_with_history,
-        test_instance.test_call_gemini_api_success,
-        test_instance.test_call_gemini_api_environment_error,
-        test_instance.test_call_gemini_api_config_error,
-        test_instance.test_build_followup_prompt,
-        test_instance.test_start_discussion,
-        test_instance.test_get_discussion_found,
-        test_instance.test_get_discussion_not_found,
-        test_instance.test_get_discussion_history,
-        test_instance.test_get_user_discussions_list,
-        test_instance.test_store_discussion,
-        test_instance.test_store_followup_question,
-        test_instance.test_call_gemini_api_followup,
-        test_instance.test_error_handling_client_connection,
-        test_instance.test_error_handling_invalid_data
-    ]
-    
-    passed = 0
-    failed = 0
-    
-    for test_method in test_methods:
-        try:
-            test_instance.setup_method()
-            test_method()
-            passed += 1
-        except Exception as e:
-            print(f"✗ {test_method.__name__} failed: {e}")
-            failed += 1
-    
-    print(f"\n=== Test Results ===")
-    print(f"Passed: {passed}")
-    print(f"Failed: {failed}")
-    print(f"Total: {passed + failed}")
-    
-    return failed == 0
+    suite = unittest.TestLoader().loadTestsFromTestCase(TestRAGEngine)
+    result = unittest.TextTestRunner(verbosity=2).run(suite)
+    return result.wasSuccessful()
 
 if __name__ == "__main__":
     success = run_all_tests()
     if success:
-        print("\n🎉 All RAG engine tests passed!")
+        print("\n\U0001F389 All RAG engine tests passed!")
     else:
-        print("\n❌ Some RAG engine tests failed!")
+        print("\n\u274C Some RAG engine tests failed!")
 
 def mock_open(read_data=""):
     """Mock open function for file operations"""

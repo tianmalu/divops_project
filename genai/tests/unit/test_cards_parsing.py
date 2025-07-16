@@ -5,6 +5,7 @@ Test script to verify the cards_drawn parsing fix
 import json
 from typing import List
 from datetime import datetime
+import unittest
 
 # Mock TarotCard class for testing
 class TarotCard:
@@ -57,37 +58,33 @@ def parse_cards_drawn(cards_drawn_str: str) -> List[TarotCard]:
     return cards_drawn
 
 # Test cases
-def test_parse_cards_drawn():
-    print("Testing parse_cards_drawn function...")
-    
-    # Test case 1: Valid JSON with null values
-    test_json_with_null = '[{"name": "The Fool", "arcana": "Major"}, null, {"name": "The Magician", "arcana": "Major"}]'
-    result1 = parse_cards_drawn(test_json_with_null)
-    print(f"Test 1 - JSON with null: {result1}")
-    assert len(result1) == 2, f"Expected 2 cards, got {len(result1)}"
-    
-    # Test case 2: Valid JSON without null
-    test_json_clean = '[{"name": "The Fool", "arcana": "Major"}, {"name": "The Magician", "arcana": "Major"}]'
-    result2 = parse_cards_drawn(test_json_clean)
-    print(f"Test 2 - Clean JSON: {result2}")
-    assert len(result2) == 2, f"Expected 2 cards, got {len(result2)}"
-    
-    # Test case 3: Invalid JSON (should fallback to eval)
-    test_invalid_json = "{'name': 'The Fool', 'arcana': 'Major'}"
-    result3 = parse_cards_drawn(f"[{test_invalid_json}]")
-    print(f"Test 3 - Invalid JSON: {result3}")
-    
-    # Test case 4: Empty string
-    result4 = parse_cards_drawn("")
-    print(f"Test 4 - Empty string: {result4}")
-    assert len(result4) == 0, f"Expected 0 cards, got {len(result4)}"
-    
-    # Test case 5: Completely invalid data
-    result5 = parse_cards_drawn("invalid data")
-    print(f"Test 5 - Invalid data: {result5}")
-    assert len(result5) == 0, f"Expected 0 cards, got {len(result5)}"
-    
-    print("All tests passed! ✅")
+class TestParseCardsDrawn(unittest.TestCase):
+    def setUp(self):
+        self.TarotCard = TarotCard
+        self.parse_cards_drawn = parse_cards_drawn
+
+    def test_json_with_null(self):
+        test_json_with_null = '[{"name": "The Fool", "arcana": "Major"}, null, {"name": "The Magician", "arcana": "Major"}]'
+        result = self.parse_cards_drawn(test_json_with_null)
+        self.assertEqual(len(result), 2)
+
+    def test_clean_json(self):
+        test_json_clean = '[{"name": "The Fool", "arcana": "Major"}, {"name": "The Magician", "arcana": "Major"}]'
+        result = self.parse_cards_drawn(test_json_clean)
+        self.assertEqual(len(result), 2)
+
+    def test_invalid_json(self):
+        test_invalid_json = "{'name': 'The Fool', 'arcana': 'Major'}"
+        result = self.parse_cards_drawn(f"[{test_invalid_json}]")
+        self.assertTrue(isinstance(result, list))
+
+    def test_empty_string(self):
+        result = self.parse_cards_drawn("")
+        self.assertEqual(len(result), 0)
+
+    def test_invalid_data(self):
+        result = self.parse_cards_drawn("invalid data")
+        self.assertEqual(len(result), 0)
 
 if __name__ == "__main__":
-    test_parse_cards_drawn()
+    unittest.main()
