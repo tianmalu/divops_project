@@ -380,3 +380,13 @@ sketch
 
 # Kube Config
 .kube
+
+
+
+# Terraform
+
+.terraform.lock.hcl
+terraform.tfstate
+tfplan
+*.terraform
+/terraform/terraform-provider-aws*
