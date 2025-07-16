@@ -9,6 +9,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 const theme = createTheme({});
 const queryClient = new QueryClient();
 
+// biome-ignore lint/style/noNonNullAssertion: no reason
 createRoot(document.getElementById("root")!).render(
 	<StrictMode>
 		<QueryClientProvider client={queryClient}>

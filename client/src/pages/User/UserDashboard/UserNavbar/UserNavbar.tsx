@@ -13,13 +13,13 @@ const UserNavbar = () => {
 	const navigate = useNavigate();
 	const [active, setActive] = useState("Billing");
 
-	const links = data.map((item, idx) => (
+	const links = data.map((item) => (
 		<Button
 			justify="flex-start"
 			w="100%"
 			variant={item.label === active ? "default" : "transparent"}
 			leftSection={<item.icon className={classes.linkIcon} stroke={1.5} />}
-			key={idx}
+			key={item.label}
 			onClick={() => {
 				setActive(item.label);
 				navigate(item.link);

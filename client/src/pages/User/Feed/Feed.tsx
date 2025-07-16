@@ -8,16 +8,14 @@ async function fetchServerPage(
 	limit: number,
 	offset: number = 0,
 ): Promise<{
-	rows: Array<{ id: string; userMessage: string, aiMessage: string }>;
+	rows: Array<{ id: string; userMessage: string; aiMessage: string }>;
 	nextOffset: number;
 }> {
-	const rows = new Array(limit)
-		.fill(0)
-		.map((_, i) => ({
-			id: i.toString(),
-			userMessage: "this is my prediction for today",
-            aiMessage: "you will be lucky"
-		}));
+	const rows = new Array(limit).fill(0).map((_, i) => ({
+		id: i.toString(),
+		userMessage: "this is my prediction for today",
+		aiMessage: "you will be lucky",
+	}));
 
 	await new Promise((r) => setTimeout(r, 500));
 
