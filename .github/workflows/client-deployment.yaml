@@ -130,10 +130,13 @@ jobs:
       - name: Checkout repo
         uses: actions/checkout@v4
 
-      - name: Cache Terraform state
+      - name: Cache Terraform files
         uses: actions/cache@v3
         with:
-          path: ./terraform/terraform.tfstate
+          path: |
+            ./terraform/terraform.tfstate
+            ./terraform/terraform.tfstate.backup
+            ./terraform/.terraform
           key: terraform-state-${{ hashFiles('terraform/**/*.tf') }}
           restore-keys: terraform-state-
 
