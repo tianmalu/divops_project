@@ -185,6 +185,8 @@ jobs:
           echo "${{ secrets.AWS_EC2_SSH_PRIVATE_KEY }}" > ~/.ssh/id_rsa
           chmod 600 ~/.ssh/id_rsa
 
+          ssh-keyscan -H ${{ steps.ec2-ip.outputs.ec2_ip }} >> ~/.ssh/known_hosts
+
           echo "[ec2]" > inventory.ini
           echo "${{ steps.ec2-ip.outputs.ec2_ip }}" >> inventory.ini
 
