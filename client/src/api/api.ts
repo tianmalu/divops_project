@@ -1,7 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 
-enum QueryKeys {
-	GET_DISCUSSIONS = "GET_DISCUSSIONS",
+export const QueryKeys = {
+	GET_DISCUSSIONS: "GET_DISCUSSIONS",
 }
 
 export function useGetDiscussionsQuery() {
