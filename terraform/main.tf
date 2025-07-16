@@ -3,8 +3,8 @@ provider "aws" {
 }
 
 resource "aws_key_pair" "deployer" {
-  key_name   = "client-app"
-  public_key = file(var.public_key_path)
+  key_name   = "ec2"
+  public_key = var.public_key
 }
 
 resource "aws_instance" "react_app" {
