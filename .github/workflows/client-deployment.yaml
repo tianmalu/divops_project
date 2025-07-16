@@ -128,26 +128,6 @@ jobs:
     steps:
       - name: Checkout repo
         uses: actions/checkout@v4
-  
-      - name: Install SSH tools
-        run: sudo apt-get install -y openssh-client
-
-      - name: Write private key to file
-        run: |
-          echo "${{ secrets.AWS_EC2_SSH_PRIVATE_KEY }}" > private-key.pem
-          chmod 600 private-key.pem
-
-
-      - name: Generate public key
-        run: |
-          ssh-keygen -y -f private-key.pem > public-key.pub
-          cat public-key.pub  # optional, for debug
-
-      # - name: Setup SSH private key
-      #   run: |
-      #     mkdir -p ~/.ssh
-      #     echo "${{ secrets.AWS_EC2_SSH_PRIVATE_KEY }}" > ~/.ssh/id_rsa
-      #     chmod 600 ~/.ssh/id_rsa
 
       - name: Setup Terraform
         uses: hashicorp/setup-terraform@v2
@@ -168,7 +148,7 @@ jobs:
           AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
           AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           AWS_REGION: us-east-1
-        run: terraform plan -var="public_key=$(cat public-key.pub)" -out=tfplan
+        run: terraform plan -out=tfplan
 
       - name: Terraform Apply
         working-directory: ./terraform
