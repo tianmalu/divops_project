@@ -168,7 +168,9 @@ jobs:
       - name: Output EC2 public IP
         working-directory: ./terraform
         id: ec2-ip
-        run: echo "ec2_ip=$(terraform output -raw ec2_public_ip)" >> $GITHUB_OUTPUT
+        run: |
+          EC2_IP=$(terraform output -raw ec2_public_ip 2>/dev/null)
+          echo "ec2_ip=$EC2_IP" >> $GITHUB_OUTPUT
 
       - name: Show EC2 Public IP
         run: echo "EC2 Public IP is ${{ steps.ec2-ip.outputs.ec2_ip }}"
