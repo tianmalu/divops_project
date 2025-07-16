@@ -1,4 +1,3 @@
----
 - name: Deploy React App Docker Container
   hosts: ec2
   become: true
@@ -17,20 +16,21 @@
         state: present
         update_cache: yes
 
-    - name: Add Docker GPG key
-      apt_key:
-        url: https://download.docker.com/linux/ubuntu/gpg
-        state: present
+    # Remove Docker GPG key and repo tasks
+    # - name: Add Docker GPG key
+    #   apt_key:
+    #     url: https://download.docker.com/linux/ubuntu/gpg
+    #     state: present
 
-    - name: Add Docker repo
-      apt_repository:
-        repo: deb [arch=amd64] https://download.docker.com/linux/ubuntu focal stable
-        state: present
-        filename: docker
+    # - name: Add Docker repo
+    #   apt_repository:
+    #     repo: deb [arch=amd64] https://download.docker.com/linux/ubuntu focal stable
+    #     state: present
+    #     filename: docker
 
-    - name: Install Docker CE
+    - name: Install Docker package (docker.io)
       apt:
-        name: docker-ce
+        name: docker.io
         state: present
         update_cache: yes
 
