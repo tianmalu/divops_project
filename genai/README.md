@@ -82,7 +82,6 @@ logger.info("Application started")
 
 - `GET /genai/daily-reading` - Get daily tarot reading
 - `POST /genai/reading/enhanced` - Get enhanced reading with context
-- `POST /genai/feedback` - Submit feedback for readings
 
 ### Discussion Management
 
@@ -129,21 +128,6 @@ curl -X POST "http://localhost:8000/genai/discussion/{discussion_id}/followup" \
   -d '{
     "question": "Can you tell me more about my career path?",
     "user_id": "user123"
-  }'
-```
-
-### Submit Feedback
-
-```bash
-# Submit feedback for a reading
-curl -X POST "http://localhost:8000/genai/feedback" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "user_id": "user123",
-    "question": "Will I find love?",
-    "ai_response": "The cards suggest...",
-    "rating": 5,
-    "comments": "Very accurate and helpful!"
   }'
 ```
 

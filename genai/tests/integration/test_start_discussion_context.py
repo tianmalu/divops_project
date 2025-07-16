@@ -12,9 +12,9 @@ from datetime import datetime
 # Add the genai directory to the path (parent of tests)
 sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
 
-from app.feedback import process_user_feedback
+import requests
 from app.rag_engine import start_discussion
-from app.models import Feedback, TarotCard
+from app.models import TarotCard
 from app.weaviate_client import get_weaviate_client
 
 def test_weaviate_connection():
@@ -68,60 +68,39 @@ def create_test_cards():
     ]
 
 def setup_feedback_context():
-    """Set up some feedback context for testing."""
-    print("🔧 Setting up feedback context...")
-    
-    test_cards = create_test_cards()
-    
-    # Create feedback for career-related questions
+    print("🔧 Setting up feedback context via API...")
+    BASE_URL = "http://localhost:8000/genai"  
     career_feedback = [
         {
             "user_id": "setup_user_1",
-            "question": "What should I focus on in my career development?",
+            "discussion_id": "setup_career_1",
             "feedback_text": "This reading was incredibly accurate! The advice about new beginnings and manifestation really helped me start my new project with confidence.",
-            "rating": 5,
-            "discussion_id": "setup_career_1"
+            "rating": 5
         },
         {
-            "user_id": "setup_user_2", 
-            "question": "How can I advance my career path?",
+            "user_id": "setup_user_2",
+            "discussion_id": "setup_career_2",
             "feedback_text": "Perfect timing! The reading about trusting my intuition while taking action was exactly what I needed to hear before my job interview.",
-            "rating": 4,
-            "discussion_id": "setup_career_2"
+            "rating": 4
         },
         {
             "user_id": "setup_user_3",
-            "question": "What opportunities should I pursue in my career?",
+            "discussion_id": "setup_career_3",
             "feedback_text": "The reading about new beginnings and creative manifestation gave me the courage to start my own business. Very insightful!",
-            "rating": 5,
-            "discussion_id": "setup_career_3"
+            "rating": 5
         }
     ]
-    
-    # Submit feedback to build context
     contexts_created = 0
     for fb_data in career_feedback:
         try:
-            feedback = Feedback(
-                user_id=fb_data["user_id"],
-                question=fb_data["question"],
-                spread=test_cards,
-                model_response=f"The cards suggest focusing on {', '.join(test_cards[0].keywords)} while using your {', '.join(test_cards[1].keywords)} to achieve success through {', '.join(test_cards[2].keywords)}.",
-                feedback_text=fb_data["feedback_text"],
-                rating=fb_data["rating"],
-                discussion_id=fb_data["discussion_id"]
-            )
-            
-            result = process_user_feedback(feedback)
-            if result.get("status") == "success":
-                contexts_created += result.get("contexts_stored", 0)
-                print(f"  ✅ Created context for: {fb_data['question'][:50]}...")
+            res = requests.post(f"{BASE_URL}/discussion/feedback", json=fb_data)
+            if res.status_code == 200 and res.json().get("status") == "success":
+                contexts_created += 1
+                print(f"  ✅ Created context for: {fb_data['discussion_id']}")
             else:
-                print(f"  ❌ Failed to create context: {result}")
-                
+                print(f"  ❌ Failed to create context: {res.text}")
         except Exception as e:
             print(f"  ❌ Error creating feedback: {e}")
-    
     print(f"🔧 Setup complete! Created {contexts_created} feedback contexts.")
     return contexts_created > 0
 
@@ -218,21 +197,23 @@ def test_response_comparison():
         
         print(f"📏 Baseline response length: {len(baseline_discussion.initial_response)} characters")
         
-        # Now add some feedback context
-        print("\n🔧 Adding feedback context...")
-        test_cards = create_test_cards()
-        
-        feedback = Feedback(
-            user_id="context_builder",
-            question="What skills should I develop for career advancement?",
-            spread=test_cards,
-            model_response="Focus on developing new skills while trusting your intuition about which areas to prioritize.",
-            feedback_text="This reading was very helpful! The advice about trusting my intuition when choosing skills to develop really resonated with me.",
-            rating=5,
-            discussion_id="context_builder_discussion"
-        )
-        
-        process_user_feedback(feedback)
+        # Now add some feedback context via API
+        print("\n🔧 Adding feedback context via API...")
+        feedback_data = {
+            "user_id": "context_builder",
+            "discussion_id": "context_builder_discussion",
+            "feedback_text": "This reading was very helpful! The advice about trusting my intuition when choosing skills to develop really resonated with me.",
+            "rating": 5
+        }
+        BASE_URL = "http://localhost:8000/genai"
+        try:
+            res = requests.post(f"{BASE_URL}/discussion/feedback", json=feedback_data)
+            if res.status_code == 200 and res.json().get("status") == "success":
+                print("  ✅ Context feedback submitted via API.")
+            else:
+                print(f"  ❌ Failed to submit context feedback: {res.text}")
+        except Exception as e:
+            print(f"  ❌ Error submitting context feedback: {e}")
         
         # Create a new discussion with similar question
         print("📝 Creating context-enhanced discussion...")

@@ -372,49 +372,6 @@ async def ask_followup_question(discussion_id: str, req: FollowupQuestionRequest
         if 'client' in locals():
             client.close()
 
-@app.post("/genai/feedback")
-async def submit_feedback(feedback: FeedbackRequest):
-    """Submit feedback for a tarot reading."""
-    try:
-        logger.info(f"Feedback submission for user: {feedback.user_id}")
-        
-        # Convert the request to our internal Feedback model
-        # Convert spread from dict to TarotCard objects
-        tarot_cards = []
-        for card_data in feedback.spread:
-            card = TarotCard(
-                name=card_data.get("name", ""),
-                keywords=card_data.get("keywords", []),
-                meanings_light=card_data.get("meanings_light", []),
-                meanings_shadow=card_data.get("meanings_shadow", []),
-                arcana=card_data.get("arcana"),
-                number=card_data.get("number"),
-                suit=card_data.get("suit"),
-                img=card_data.get("img")
-            )
-            tarot_cards.append(card)
-        
-        # Create Feedback object
-        feedback_obj = Feedback(
-            user_id=feedback.user_id,
-            question=feedback.question,
-            spread=tarot_cards,
-            model_response=feedback.model_response,
-            feedback_text=feedback.feedback_text,
-            rating=feedback.rating,
-            discussion_id=feedback.discussion_id
-        )
-        
-        # Process the feedback
-        result = process_user_feedback(feedback_obj)
-        
-        logger.info(f"Successfully processed feedback for user {feedback.user_id}")
-        return result
-        
-    except Exception as e:
-        logger.error(f"Feedback submission failed: {e}")
-        raise HTTPException(status_code=500, detail=f"Failed to submit feedback: {str(e)}")
-
 @app.post("/genai/discussion/{discussion_id}/feedback")
 async def submit_discussion_feedback(discussion_id: str, feedback_data: dict):
     """Submit feedback for a discussion with rating and accuracy assessment."""

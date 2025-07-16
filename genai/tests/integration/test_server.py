@@ -56,47 +56,6 @@ class TestServerAPI(unittest.TestCase):
         self.assertEqual(res.status_code, 200)
         self.assertIn("discussions", res.json())
 
-    def test_feedback(self):
-        discussion_id, discussion_data = get_discussion_id()
-        payload = {
-            "user_id": "test_user",
-            "question": discussion_data.get("initial_question", "What should I focus on?"),
-            "spread": [
-                {
-                    "name": "The Fool",
-                    "keywords": ["new beginnings", "spontaneity", "innocence"],
-                    "meanings_light": ["freedom", "adventure", "new journey"],
-                    "meanings_shadow": ["recklessness", "foolishness", "carelessness"],
-                    "arcana": "Major",
-                    "number": "0"
-                },
-                {
-                    "name": "The Magician", 
-                    "keywords": ["manifestation", "willpower", "desire", "creation"],
-                    "meanings_light": ["skill", "diplomacy", "address", "subtlety"],
-                    "meanings_shadow": ["disgrace", "disloyalty", "inability", "weakness"],
-                    "arcana": "Major",
-                    "number": "I"
-                },
-                {
-                    "name": "The High Priestess",
-                    "keywords": ["intuition", "sacred knowledge", "divine feminine"],
-                    "meanings_light": ["wisdom", "sound judgment", "common sense"],
-                    "meanings_shadow": ["ignorance", "lack of understanding", "selfishness"],
-                    "arcana": "Major",
-                    "number": "II"
-                }
-            ],
-            "model_response": discussion_data.get("initial_response", "The cards suggest focusing on new beginnings and trusting your intuition."),
-            "feedback_text": "Very insightful reading, thank you! The advice about new beginnings and intuition really resonated with me.",
-            "rating": 5,
-            "discussion_id": discussion_id
-        }
-        res = requests.post(f"{BASE_URL}/feedback", json=payload)
-        self.assertEqual(res.status_code, 200)
-        self.assertIn("keywords_updated", res.json())
-        self.assertIn("contexts_stored", res.json())
-
     def test_discussion_feedback(self):
         discussion_id, _ = get_discussion_id()
         payload = {
