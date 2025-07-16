@@ -4,38 +4,27 @@ from typing import List, Optional
 
 # Third-party imports
 from fastapi import FastAPI, Query, HTTPException
-from pydantic import BaseModel
 from dotenv import load_dotenv
-import weaviate
-from weaviate.classes.init import Auth
-from weaviate.classes.config import Configure, Property, DataType, ReferenceProperty
 
 # Local imports
 from app.rag_engine import call_gemini_api, build_tarot_prompt
-from app.models import AskRequest, Feedback, TarotCard, KeywordMeaning
+from app.models import AskRequest, Feedback, TarotCard
 from app.card_engine import layout_three_card
 from app.feedback import process_user_feedback, get_feedback_stats
 from app.logger_config import get_tarot_logger
+from app.weaviate_client import get_weaviate_client
 
 # Setup logger
 logger = get_tarot_logger(__name__)
-
 
 load_dotenv()
 
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
 
-WEAVIATE_URL     = os.getenv("WEAVIATE_URL", "http://localhost:8080")
-WEAVIATE_API_KEY = os.getenv("WEAVIATE_API_KEY", "")
-
 if not GEMINI_API_KEY :
     raise RuntimeError("Missing GEMINI_API_KEY in environment")
 
-client = weaviate.connect_to_weaviate_cloud(
-    cluster_url = WEAVIATE_URL ,
-    auth_credentials=Auth.api_key(WEAVIATE_API_KEY),
-    skip_init_checks=True,
-)
+client = get_weaviate_client()
 
 print("Weaviate is ready:", client.is_ready())
 
@@ -109,12 +98,6 @@ def generate_daily_reading(user_id: Optional[str] = None) -> dict:
 
 # ── Main FastAPI Application ────────────────────────────────────────────────────
 app = FastAPI()
-
-# ── Scenario 0 (Test Case): Simple Question ────────────────────────────────────────────────
-@app.get("/predict")
-def predict(question: str = Query(...)):
-    result = call_gemini_api(question)
-    return {"result": result}
 
 # ── Scenario 1: Casual Daily Use ────────────────────────────────────────────────
 @app.get("/daily-reading")
