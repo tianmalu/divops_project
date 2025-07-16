@@ -143,7 +143,7 @@ from app.logger_config import get_tarot_logger
 
 logger = get_tarot_logger(__name__)
 
-@app.post("/reading/enhanced")
+@app.post("genai/reading/enhanced")
 async def get_enhanced_reading(reading_data: dict):
     logger.info("Enhanced reading request received")
     

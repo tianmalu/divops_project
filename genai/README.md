@@ -75,29 +75,29 @@ logger.info("Application started")
 
 ### System Endpoints
 
-- `GET /health` - Health check endpoint
-- `GET /predict` - Simple prediction with basic guidance
+- `GET /genai/health` - Health check endpoint
+- `GET /genai/predict` - Simple prediction with basic guidance
 
 ### Core Endpoints
 
-- `GET /daily-reading` - Get daily tarot reading
-- `POST /reading/enhanced` - Get enhanced reading with context
-- `POST /feedback` - Submit feedback for readings
+- `GET /genai/daily-reading` - Get daily tarot reading
+- `POST /genai/reading/enhanced` - Get enhanced reading with context
+- `POST /genai/feedback` - Submit feedback for readings
 
 ### Discussion Management
 
-- `GET /discussions/{user_id}` - Get all discussions for a user
-- `GET /discussion/{discussion_id}` - Get specific discussion details
-- `POST /discussion/start` - Start a new discussion
-- `POST /discussion/{discussion_id}/followup` - Add followup question to discussion
-- `POST /discussion/{discussion_id}/feedback` - Submit feedback for a discussion
+- `GET /genai/discussions/{user_id}` - Get all discussions for a user
+- `GET /genai/discussion/{discussion_id}` - Get specific discussion details
+- `POST /genai/discussion/start` - Start a new discussion
+- `POST /genai/discussion/{discussion_id}/followup` - Add followup question to discussion
+- `POST /genai/discussion/{discussion_id}/feedback` - Submit feedback for a discussion
 
 ### Feedback & Analytics
 
-- `GET /feedback/stats` - Get general feedback statistics
-- `GET /feedback/discussion/{discussion_id}` - Get feedback for specific discussion
-- `GET /feedback/contexts/stats` - Get context-aware feedback statistics
-- `GET /feedback/contexts/similar` - Find similar feedback contexts
+- `GET /genai/feedback/stats` - Get general feedback statistics
+- `GET /genai/feedback/discussion/{discussion_id}` - Get feedback for specific discussion
+- `GET /genai/feedback/contexts/stats` - Get context-aware feedback statistics
+- `GET /genai/feedback/contexts/similar` - Find similar feedback contexts
 
 ## API Usage Examples
 
@@ -105,17 +105,17 @@ logger.info("Application started")
 
 ```bash
 # Get daily reading
-curl -X GET "http://localhost:8000/daily-reading?user_id=user123"
+curl -X GET "http://localhost:8000/genai/daily-reading?user_id=user123"
 
 # Get prediction
-curl -X GET "http://localhost:8000/predict?question=What should I focus on today?"
+curl -X GET "http://localhost:8000/genai/predict?question=What should I focus on today?"
 ```
 
 ### Discussion Flow
 
 ```bash
 # Start a new discussion
-curl -X POST "http://localhost:8000/discussion/start" \
+curl -X POST "http://localhost:8000/genai/discussion/start" \
   -H "Content-Type: application/json" \
   -d '{
     "user_id": "user123",
@@ -124,7 +124,7 @@ curl -X POST "http://localhost:8000/discussion/start" \
   }'
 
 # Add followup question
-curl -X POST "http://localhost:8000/discussion/{discussion_id}/followup" \
+curl -X POST "http://localhost:8000/genai/discussion/{discussion_id}/followup" \
   -H "Content-Type: application/json" \
   -d '{
     "question": "Can you tell me more about my career path?",
@@ -136,7 +136,7 @@ curl -X POST "http://localhost:8000/discussion/{discussion_id}/followup" \
 
 ```bash
 # Submit feedback for a reading
-curl -X POST "http://localhost:8000/feedback" \
+curl -X POST "http://localhost:8000/genai/feedback" \
   -H "Content-Type: application/json" \
   -d '{
     "user_id": "user123",

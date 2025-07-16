@@ -76,7 +76,7 @@ app = FastAPI(
     lifespan=lifespan
 )
 
-@app.get("/health")
+@app.get("/genai/health")
 async def health_check():
     """Health check endpoint with feedback system status."""
     try:
@@ -112,7 +112,7 @@ async def health_check():
             "error": str(e)
         }
 
-@app.get("/predict")
+@app.get("/genai/predict")
 async def predict(
     question: str = Query(..., description="Question for prediction"),
     user_id: Optional[str] = Query(None, description="User ID for tracking")
@@ -147,7 +147,7 @@ async def predict(
         logger.error(f"Prediction failed: {e}")
         raise HTTPException(status_code=500, detail="Failed to generate prediction")
 
-@app.get("/daily-reading")
+@app.get("/genai/daily-reading")
 async def daily_reading(
     user_id: Optional[str] = Query(None, description="User ID for tracking daily reading")
 ):
@@ -174,7 +174,7 @@ async def daily_reading(
         logger.error(f"Daily reading failed: {e}")
         raise HTTPException(status_code=500, detail="Failed to generate daily reading")
 
-@app.get("/discussions/{user_id}")
+@app.get("/genai/discussions/{user_id}")
 async def get_user_discussions(user_id: str):
     """Get all discussions for a user."""
     try:
@@ -206,7 +206,7 @@ async def get_user_discussions(user_id: str):
         if 'client' in locals():
             client.close()
 
-@app.get("/discussion/{discussion_id}")
+@app.get("/genai/discussion/{discussion_id}")
 async def get_discussion_details(discussion_id: str):
     """Get details of a specific discussion including cards and history."""
     try:
@@ -267,7 +267,7 @@ async def get_discussion_details(discussion_id: str):
         if 'client' in locals():
             client.close()
 
-@app.post("/discussion/start")
+@app.post("/genai/discussion/start")
 async def start_new_discussion(req: StartDiscussionRequest):
     """Start a new discussion with initial question and draw tarot cards."""
     try:
@@ -316,7 +316,7 @@ async def start_new_discussion(req: StartDiscussionRequest):
         if 'client' in locals():
             client.close()
 
-@app.post("/discussion/{discussion_id}/followup")
+@app.post("/genai/discussion/{discussion_id}/followup")
 async def ask_followup_question(discussion_id: str, req: FollowupQuestionRequest):
     """Ask a followup question in an existing discussion."""
     try:
@@ -372,7 +372,7 @@ async def ask_followup_question(discussion_id: str, req: FollowupQuestionRequest
         if 'client' in locals():
             client.close()
 
-@app.post("/feedback")
+@app.post("/genai/feedback")
 async def submit_feedback(feedback: FeedbackRequest):
     """Submit feedback for a tarot reading."""
     try:
@@ -415,7 +415,7 @@ async def submit_feedback(feedback: FeedbackRequest):
         logger.error(f"Feedback submission failed: {e}")
         raise HTTPException(status_code=500, detail=f"Failed to submit feedback: {str(e)}")
 
-@app.post("/discussion/{discussion_id}/feedback")
+@app.post("/genai/discussion/{discussion_id}/feedback")
 async def submit_discussion_feedback(discussion_id: str, feedback_data: dict):
     """Submit feedback for a discussion with rating and accuracy assessment."""
     try:
@@ -454,7 +454,7 @@ async def submit_discussion_feedback(discussion_id: str, feedback_data: dict):
         if 'client' in locals():
             client.close()
 
-@app.get("/feedback/stats")
+@app.get("/genai/feedback/stats")
 async def get_feedback_statistics(user_id: Optional[str] = Query(None, description="Optional user ID to filter statistics")):
     """Get feedback statistics for analysis."""
     try:
@@ -469,7 +469,7 @@ async def get_feedback_statistics(user_id: Optional[str] = Query(None, descripti
         logger.error(f"Failed to get feedback statistics: {e}")
         raise HTTPException(status_code=500, detail=f"Failed to get feedback statistics: {str(e)}")
 
-@app.get("/feedback/discussion/{discussion_id}")
+@app.get("/genai/feedback/discussion/{discussion_id}")
 async def get_discussion_feedback(discussion_id: str):
     """Get feedback for a specific discussion."""
     try:
@@ -503,7 +503,7 @@ async def get_discussion_feedback(discussion_id: str):
         if 'client' in locals():
             client.close()
 
-@app.get("/feedback/contexts/stats")
+@app.get("/genai/feedback/contexts/stats")
 async def get_context_statistics():
     """Get statistics about stored reading contexts."""
     try:
@@ -520,7 +520,7 @@ async def get_context_statistics():
         logger.error(f"Failed to get context statistics: {e}")
         raise HTTPException(status_code=500, detail=f"Failed to get context statistics: {str(e)}")
 
-@app.post("/reading/enhanced")
+@app.post("/genai/reading/enhanced")
 async def get_enhanced_reading(reading_data: dict):
     """Get an enhanced reading that incorporates feedback context."""
     try:
@@ -561,7 +561,7 @@ async def get_enhanced_reading(reading_data: dict):
         logger.error(f"Failed to generate enhanced reading: {e}")
         raise HTTPException(status_code=500, detail=f"Failed to generate enhanced reading: {str(e)}")
 
-@app.get("/feedback/contexts/similar")
+@app.get("/genai/feedback/contexts/similar")
 async def get_similar_contexts(
     question: str = Query(..., description="Question to find similar contexts for"),
     cards: str = Query(..., description="JSON string of cards with positions"),

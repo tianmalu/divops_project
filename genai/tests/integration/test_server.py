@@ -4,7 +4,7 @@ import requests
 import time
 from pprint import pprint
 
-BASE_URL = "http://localhost:8000"
+BASE_URL = "http://localhost:8000/genai"
 
 def get_discussion_id():
     payload = {
@@ -26,7 +26,6 @@ class TestServerAPI(unittest.TestCase):
     def test_predict(self):
         res = requests.get(f"{BASE_URL}/predict", params={"question": "What should I focus on this month?", "user_id": "test_user"})
         self.assertEqual(res.status_code, 200)
-        # Accept either 'cards' or 'result' in response for compatibility
         response_json = res.json()
         self.assertTrue("cards" in response_json or "result" in response_json)
 
@@ -107,7 +106,6 @@ class TestServerAPI(unittest.TestCase):
         }
         res = requests.post(f"{BASE_URL}/discussion/{discussion_id}/feedback", json=payload)
         self.assertEqual(res.status_code, 200)
-        # Accept either 'feedback_text' or 'message' in response for compatibility
         response_json = res.json()
         self.assertTrue("feedback_text" in response_json or "message" in response_json)
 
