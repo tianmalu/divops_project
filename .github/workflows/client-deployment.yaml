@@ -186,4 +186,4 @@ jobs:
           echo "[ec2]" > inventory.ini
           echo "${{ steps.ec2-ip.outputs.ec2_ip }}" >> inventory.ini
 
-          ansible-playbook -i inventory.ini playbook.yml --private-key ~/.ssh/id_rsa -u ubuntu
+          ansible-playbook -i inventory.ini playbook.yml --private-key ~/.ssh/id_rsa -u ubuntu -b
