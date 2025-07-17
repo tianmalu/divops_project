@@ -1,6 +1,8 @@
 package com.team_divops.users.controller;
 
 import com.team_divops.users.dto.UserRegistrationRequest;
+import com.team_divops.users.dto.LoginRequest;
+import com.team_divops.users.dto.LoginResponse;
 import com.team_divops.users.model.User;
 import com.team_divops.users.repository.UsersRepository;
 import org.springframework.http.ResponseEntity;
@@ -11,6 +13,8 @@ import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import com.team_divops.users.security.JwtUtil;
+import java.util.Optional;
 
 @Tag(name = "Users", description = "Users Service APIs")
 @RestController
@@ -43,6 +47,39 @@ public class UsersController {
         usersRepository.save(user);
 
         return ResponseEntity.ok("User registered successfully");
+    }
+
+    @Operation(summary = "Login a user and return JWT token with user details")
+    @ApiResponse(responseCode = "200", description = "Successful login",
+        content = @Content(schema = @Schema(implementation = LoginResponse.class))
+    )
+    @ApiResponse(responseCode = "401", description = "Invalid email or password",
+        content = @Content(mediaType = "text/plain")
+    )
+    @PostMapping("/login")
+    public ResponseEntity<?> loginUser(@RequestBody LoginRequest request) {
+        Optional<User> optionalUser = usersRepository.findByEmail(request.getEmail());
+
+        if (optionalUser.isEmpty()) {
+            return ResponseEntity.status(401).body("Email not found");
+        }
+
+        User user = optionalUser.get();
+
+        if (!passwordEncoder.matches(request.getPassword(), user.getPassword())) {
+            return ResponseEntity.status(401).body("Invalid password");
+        }
+
+        String token = JwtUtil.generateToken(user.getEmail());
+
+        LoginResponse response = new LoginResponse(
+                token,
+                user.getFirstName(),
+                user.getLastName(),
+                user.getEmail()
+        );
+
+        return ResponseEntity.ok(response);
     }
 
     @Operation(summary = "Test serivce is working endpoint")
