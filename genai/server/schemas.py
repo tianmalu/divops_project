@@ -1,9 +1,17 @@
-from pydantic import BaseModel, Field, field_validator
+from pydantic import BaseModel, Field, field_validator, ConfigDict
 from typing import List, Optional, Dict, Any
 from enum import Enum
 import uuid
 from datetime import datetime
 import re
+import json
+
+# Global configuration for datetime serialization
+class DateTimeEncoder(json.JSONEncoder):
+    def default(self, obj):
+        if isinstance(obj, datetime):
+            return obj.isoformat()
+        return super().default(obj)
 
 # ═══════════════════════════════════════════════════════════════════════════════
 # Enums 
@@ -47,8 +55,8 @@ class ReadingRequest(BaseModel):
     question: Optional[str] = Field(None, max_length=500, description="Question to ask")
     spread_type: SpreadType = Field(SpreadType.THREE_CARD, description="Type of spread")
     user_id: Optional[str] = Field(None, description="User ID")
-    question_id: Optional[str] = Field(default_factory=lambda: str(uuid.uuid4()), description="Unique question ID")
-    discussion_id: Optional[str] = Field(default_factory=lambda: str(uuid.uuid4()), description="Discussion thread ID")
+    question_id: Optional[str] = Field(None, description="Unique question ID")
+    discussion_id: Optional[str] = Field(None, description="Discussion thread ID")
     reading_type: ReadingType = Field(ReadingType.CUSTOM, description="Type of reading")
     spread: Optional[List[Card]] = Field(None, description="Custom card spread")
     
@@ -82,11 +90,42 @@ class ReadingResponse(BaseModel):
     question_id: Optional[str] = Field(None, description="Question ID")
     discussion_id: Optional[str] = Field(None, description="Discussion thread ID")
     reading_type: ReadingType = Field(..., description="Type of reading")
+    is_followup: bool = Field(default=False, description="Whether this is a followup to an existing discussion")
     timestamp: datetime = Field(default_factory=datetime.utcnow, description="Reading timestamp")
 
 # ═══════════════════════════════════════════════════════════════════════════════
 # Discussion Models
 # ═══════════════════════════════════════════════════════════════════════════════
+
+class StartDiscussionRequest(BaseModel):
+    """Request to start a new discussion with initial question"""
+    user_id: str = Field(..., description="User ID")
+    initial_question: str = Field(..., min_length=1, max_length=500, description="Initial question to start discussion")
+    topic: str = Field(..., min_length=1, max_length=200, description="Discussion topic/title")
+    
+    @field_validator('initial_question')
+    @classmethod
+    def validate_initial_question(cls, v):
+        if len(v.strip()) == 0:
+            raise ValueError('Initial question cannot be empty')
+        return v.strip()
+    
+    @field_validator('topic')
+    @classmethod
+    def validate_topic(cls, v):
+        if len(v.strip()) == 0:
+            raise ValueError('Topic cannot be empty')
+        return v.strip()
+
+class StartDiscussionResponse(BaseModel):
+    """Response after starting a new discussion"""
+    discussion_id: str = Field(..., description="Generated discussion ID")
+    user_id: str = Field(..., description="User ID")
+    topic: str = Field(..., description="Discussion topic")
+    initial_question: str = Field(..., description="Initial question")
+    initial_response: str = Field(..., description="AI response to initial question")
+    cards_drawn: List[Dict[str, Any]] = Field(..., description="Cards drawn for this discussion")
+    created_at: datetime = Field(..., description="Discussion creation timestamp")
 
 class DiscussionMessage(BaseModel):
     message_id: str = Field(default_factory=lambda: str(uuid.uuid4()), description="Unique message ID")
@@ -107,19 +146,32 @@ class DiscussionResponse(BaseModel):
 # ═══════════════════════════════════════════════════════════════════════════════
 
 class FeedbackRequest(BaseModel):
-    reading_id: str = Field(..., description="ID of the reading")
     user_id: str = Field(..., description="User ID")
-    question_id: Optional[str] = Field(None, description="Question ID")
-    discussion_id: Optional[str] = Field(None, description="Discussion thread ID")
+    question: str = Field(..., description="Original question asked")
+    spread: List[Dict[str, Any]] = Field(..., description="Cards in the spread")
+    model_response: str = Field(..., description="AI model response to the question")
     feedback_text: Optional[str] = Field(None, max_length=1000, description="Text feedback")
-    rating: Optional[int] = Field(None, ge=1, le=5, description="Rating from 1-5")
-    helpful: Optional[bool] = Field(None, description="Was the reading helpful?")
+    rating: Optional[int] = Field(None, ge=1, le=5, description="Rating from 1-5 (4+ updates KeywordMeaning)")
+    discussion_id: Optional[str] = Field(None, description="Discussion thread ID")
+    
+    @field_validator('rating')
+    @classmethod
+    def validate_rating(cls, v):
+        if v is not None and not (1 <= v <= 5):
+            raise ValueError('Rating must be between 1 and 5')
+        return v
 
 # ═══════════════════════════════════════════════════════════════════════════════
 # Error Models 
 # ═══════════════════════════════════════════════════════════════════════════════
 
 class ErrorResponse(BaseModel):
+    model_config = ConfigDict(
+        json_encoders={
+            datetime: lambda v: v.isoformat()
+        }
+    )
+    
     error: str = Field(..., description="Error code")
     message: str = Field(..., description="Error message")
     timestamp: datetime = Field(default_factory=datetime.utcnow, description="Error timestamp")
@@ -182,3 +234,23 @@ class QuestionResponse(BaseModel):
     discussion_id: Optional[str] = Field(None, description="Associated discussion ID")
     created_at: datetime
     updated_at: Optional[datetime] = None
+
+class FollowupQuestionRequest(BaseModel):
+    """Request to ask a followup question in an existing discussion"""
+    question: str = Field(..., min_length=1, max_length=500, description="Followup question")
+    user_id: Optional[str] = Field(None, description="User ID (optional for validation)")
+    
+    @field_validator('question')
+    @classmethod
+    def validate_question(cls, v):
+        if len(v.strip()) == 0:
+            raise ValueError('Question cannot be empty')
+        return v.strip()
+
+class FollowupQuestionResponse(BaseModel):
+    """Response to a followup question"""
+    question_id: str = Field(..., description="Generated question ID")
+    discussion_id: str = Field(..., description="Discussion ID")
+    question: str = Field(..., description="Followup question")
+    response: str = Field(..., description="AI response")
+    timestamp: datetime = Field(..., description="Question timestamp")
