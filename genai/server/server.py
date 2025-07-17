@@ -325,47 +325,6 @@ async def get_discussion_feedback(discussion_id: str):
     finally:
         if 'client' in locals():
             client.close()
-
-@app.post("/genai/reading/enhanced")
-async def get_enhanced_reading(reading_data: dict):
-    """Get an enhanced reading that incorporates feedback context."""
-    try:
-        logger.info("Generating enhanced reading with context")
-        
-        # Extract data from request
-        question = reading_data.get("question", "")
-        base_interpretation = reading_data.get("base_interpretation", "")
-        cards_data = reading_data.get("cards", [])
-        user_id = reading_data.get("user_id")
-        
-        # Convert cards data to TarotCard objects
-        cards = []
-        for card_data in cards_data:
-            card = TarotCard(
-                name=card_data.get("name", ""),
-                keywords=card_data.get("keywords", []),
-                meanings_light=card_data.get("meanings_light", []),
-                meanings_shadow=card_data.get("meanings_shadow", []),
-                arcana=card_data.get("arcana"),
-                number=card_data.get("number"),
-                suit=card_data.get("suit"),
-                img=card_data.get("img")
-            )
-            cards.append(card)
-        
-        # Get enhanced reading
-        enhanced_result = enhance_reading_with_feedback_context(
-            question=question,
-            cards=cards,
-            base_interpretation=base_interpretation
-        )
-        
-        logger.info("Successfully generated enhanced reading")
-        return {"enhanced_interpretation": enhanced_result}
-        
-    except Exception as e:
-        logger.error(f"Failed to generate enhanced reading: {e}")
-        raise HTTPException(status_code=500, detail=f"Failed to generate enhanced reading: {str(e)}")
         
 def initialize_feedback_collections(client):
     """Initialize Weaviate collections for feedback system."""

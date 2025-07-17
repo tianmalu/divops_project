@@ -131,10 +131,6 @@ curl -X POST "http://localhost:8000/genai/discussion/{discussion_id}/followup" \
 WEAVIATE_URL=your_weaviate_url
 WEAVIATE_API_KEY=your_weaviate_key
 GEMINI_API_KEY=your_gemini_key
-
-# Optional
-LOG_LEVEL=INFO
-TAROT_ENV=development
 ```
 
 ### Logging Levels
