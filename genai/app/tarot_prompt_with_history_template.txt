@@ -1,0 +1,9 @@
+Previous conversation context:
+$history_context
+
+Current question: $question
+
+Based on the conversation history above and the tarot cards drawn, please provide guidance that considers both the current question and the previous discussion context.
+
+Tarot Cards Context:
+$tarot_context
