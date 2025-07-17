@@ -32,13 +32,14 @@ from app.models import TarotCard, Discussion, FollowupQuestion, CardLayout
 class TestRAGEngine(unittest.TestCase):
     """Test suite for RAG engine functionality"""
     def setUp(self):
-        self.sample_card = CardLayout(
+        self.sample_cardlayout = CardLayout(
             name="The Fool",
             position="past",
             upright=True,
             meaning="New beginnings",
             position_keywords=["roots", "potential"]
         )
+        self.sample_card = self.sample_cardlayout
         self.sample_picks = [
             CardLayout(name="The Fool", position="past", upright=True, meaning="Fresh start", position_keywords=["new beginnings"]),
             CardLayout(name="The Fool", position="present", upright=False, meaning="Recklessness", position_keywords=["naivety"]),

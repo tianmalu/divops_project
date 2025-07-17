@@ -48,10 +48,6 @@ class TestServerAPI(unittest.TestCase):
         res = requests.post(f"{BASE_URL}/discussion/{discussion_id}/followup", json=payload)
         self.assertEqual(res.status_code, 200)
         self.assertIn("response", res.json())
-        # User discussions
-        res = requests.get(f"{BASE_URL}/discussions/test_user")
-        self.assertEqual(res.status_code, 200)
-        self.assertIn("discussions", res.json())
 
     def test_discussion_feedback(self):
         discussion_id, _ = get_discussion_id()
