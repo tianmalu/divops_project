@@ -17,7 +17,7 @@ sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 # Local imports
 from app.weaviate_client import get_weaviate_client
-from app.models import TarotCard
+from app.models import TarotCard, CardLayout
 from app.feedback import FeedbackProcessor
 from app.logger_config import get_tarot_logger
 
@@ -32,8 +32,8 @@ class ContextAwareReader:
     def __init__(self):
         self.client = get_weaviate_client()
         self.feedback_processor = FeedbackProcessor()
-        
-    def enhance_reading_with_context(self, question: str, cards: List[TarotCard], 
+
+    def enhance_reading_with_context(self, question: str, cards: List[CardLayout], 
                                    base_interpretation: str) -> Dict[str, str]:
         """
         Enhance a reading interpretation with context from similar past readings.
@@ -101,7 +101,7 @@ class ContextAwareReader:
                 "similar_contexts_count": 0
             }
     
-    def _generate_context_insights(self, similar_contexts: List[Dict], current_cards: List[TarotCard]) -> str:
+    def _generate_context_insights(self, similar_contexts: List[Dict], current_cards: List[CardLayout]) -> str:
         """
         Generate insights based on similar contexts.
         
@@ -143,7 +143,7 @@ class ContextAwareReader:
         
         return "\n".join(insights) if insights else "Similar readings found, but no specific patterns identified."
     
-    def _analyze_card_patterns(self, similar_contexts: List[Dict], current_cards: List[TarotCard]) -> List[str]:
+    def _analyze_card_patterns(self, similar_contexts: List[Dict], current_cards: List[CardLayout]) -> List[str]:
         """
         Analyze patterns for specific cards in similar positions.
         
@@ -353,7 +353,7 @@ class ContextAwareReader:
             self.feedback_processor.client.close()
 
 
-def enhance_reading_with_feedback_context(question: str, cards: List[TarotCard], 
+def enhance_reading_with_feedback_context(question: str, cards: List[CardLayout], 
                                         base_interpretation: str) -> Dict[str, str]:
     """
     Main function to enhance a reading with feedback context.

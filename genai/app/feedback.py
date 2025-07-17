@@ -14,7 +14,7 @@ sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 # Local imports
 from app.weaviate_client import get_weaviate_client
-from app.models import Feedback, KeywordMeaning, TarotCard, Discussion
+from app.models import Feedback, KeywordMeaning, TarotCard, CardLayout
 from app.logger_config import get_tarot_logger
 from datetime import datetime
 
@@ -125,12 +125,12 @@ class FeedbackProcessor:
             contexts_stored += 1
             
             # Extract keywords from the cards in the spread
-            for position, card in enumerate(feedback.spread):
-                if card.keywords:
-                    for keyword in card.keywords:
+            for position, layout in enumerate(feedback.spread):
+                if layout.position_keywords:
+                    for keyword in layout.position_keywords:
                         # Create or update KeywordMeaning entry
                         self._create_or_update_keyword_meaning(
-                            card=card,
+                            card=layout.name,
                             keyword=keyword,
                             feedback=feedback,
                             position=position
@@ -147,7 +147,7 @@ class FeedbackProcessor:
             logger.error(f"Error updating keyword meanings: {str(e)}")
             raise
     
-    def _create_or_update_keyword_meaning(self, card: TarotCard, keyword: str, 
+    def _create_or_update_keyword_meaning(self, layout: CardLayout, keyword: str, 
                                          feedback: Feedback, position: int):
         """
         Create or update a KeywordMeaning entry based on feedback.
@@ -173,14 +173,15 @@ class FeedbackProcessor:
             )
             
             # Check if keyword meaning already exists for this card
-            existing_meanings = self._get_existing_keyword_meanings(card.name, keyword)
+            existing_meanings = self._get_existing_keyword_meanings(layout.name, keyword)
             
             if existing_meanings:
                 # Update existing meaning
                 self._update_existing_keyword_meaning(existing_meanings[0], keyword_meaning)
             else:
                 # Create new meaning
-                self._create_new_keyword_meaning(card, keyword_meaning)
+                self._create_new_keyword_meaning(layout, keyword_meaning)
+
                 
         except Exception as e:
             logger.error(f"Error creating/updating keyword meaning: {str(e)}")
@@ -264,7 +265,8 @@ class FeedbackProcessor:
             logger.error(f"Error updating existing keyword meaning: {str(e)}")
             raise
     
-    def _create_new_keyword_meaning(self, card: TarotCard, keyword_meaning: KeywordMeaning):
+    def _create_new_keyword_meaning(self, layout: CardLayout, keyword_meaning: KeywordMeaning):
+
         """
         Create a new keyword meaning entry.
         
@@ -280,7 +282,7 @@ class FeedbackProcessor:
                 "source": keyword_meaning.source,
                 "orientation": keyword_meaning.orientation,
                 "position": keyword_meaning.position,
-                "card_name": card.name,
+                "card_name": layout.name,
                 "created_at": datetime.now().isoformat()
             }
             
@@ -312,15 +314,12 @@ class FeedbackProcessor:
                 "discussion_id": feedback.discussion_id,
                 "timestamp": datetime.now().isoformat(),
                 "spread_info": json.dumps([{
-                    "position": i,
-                    "card_name": card.name,
-                    "card_arcana": card.arcana,
-                    "card_number": card.number,
-                    "card_suit": card.suit,
-                    "keywords": card.keywords,
-                    "meanings_light": card.meanings_light,
-                    "meanings_shadow": card.meanings_shadow
-                } for i, card in enumerate(feedback.spread)]),
+                    "position": layout.position,
+                    "card_name": layout.name,
+                    "upright": layout.upright,
+                    "keywords": layout.position_keywords,
+                    "meaning": layout.meaning
+                } for layout in feedback.spread]),
                 "total_cards": len(feedback.spread),
                 "question_type": self._classify_question_type(feedback.question),
                 "source": "accurate_feedback"

@@ -76,17 +76,13 @@ logger.info("Application started")
 ### System Endpoints
 
 - `GET /genai/health` - Health check endpoint
-- `GET /genai/predict` - Simple prediction with basic guidance
 
 ### Core Endpoints
 
 - `GET /genai/daily-reading` - Get daily tarot reading
-- `POST /genai/reading/enhanced` - Get enhanced reading with context
 
 ### Discussion Management
 
-- `GET /genai/discussions/{user_id}` - Get all discussions for a user
-- `GET /genai/discussion/{discussion_id}` - Get specific discussion details
 - `POST /genai/discussion/start` - Start a new discussion
 - `POST /genai/discussion/{discussion_id}/followup` - Add followup question to discussion
 - `POST /genai/discussion/{discussion_id}/feedback` - Submit feedback for a discussion
@@ -95,8 +91,6 @@ logger.info("Application started")
 
 - `GET /genai/feedback/stats` - Get general feedback statistics
 - `GET /genai/feedback/discussion/{discussion_id}` - Get feedback for specific discussion
-- `GET /genai/feedback/contexts/stats` - Get context-aware feedback statistics
-- `GET /genai/feedback/contexts/similar` - Find similar feedback contexts
 
 ## API Usage Examples
 
@@ -106,8 +100,6 @@ logger.info("Application started")
 # Get daily reading
 curl -X GET "http://localhost:8000/genai/daily-reading?user_id=user123"
 
-# Get prediction
-curl -X GET "http://localhost:8000/genai/predict?question=What should I focus on today?"
 ```
 
 ### Discussion Flow
@@ -119,7 +111,6 @@ curl -X POST "http://localhost:8000/genai/discussion/start" \
   -d '{
     "user_id": "user123",
     "initial_question": "What does my future hold?",
-    "topic": "Future guidance"
   }'
 
 # Add followup question

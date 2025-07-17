@@ -32,7 +32,6 @@ class TestModels(unittest.TestCase):
         self.valid_discussion_data = {
             "discussion_id": "test_discussion_123",
             "user_id": "test_user_456",
-            "topic": "Love and Relationships",
             "initial_question": "Will I find love this year?",
             "initial_response": "The cards suggest new opportunities...",
             "cards_drawn": [],
@@ -94,7 +93,6 @@ class TestModels(unittest.TestCase):
         
         self.assertEqual(discussion.discussion_id, "test_discussion_123")
         self.assertEqual(discussion.user_id, "test_user_456")
-        self.assertEqual(discussion.topic, "Love and Relationships")
         self.assertEqual(discussion.initial_question, "Will I find love this year?")
         self.assertEqual(discussion.initial_response, "The cards suggest new opportunities...")
         self.assertIsInstance(discussion.cards_drawn, list)
@@ -112,23 +110,26 @@ class TestModels(unittest.TestCase):
     def test_discussion_empty_strings(self):
         """Test Discussion validation with empty strings"""
         invalid_data = self.valid_discussion_data.copy()
-        invalid_data["topic"] = ""
         invalid_data["user_id"] = ""  # Test empty user_id
         
         discussion = Discussion(**invalid_data)
-        self.assertEqual(discussion.topic, "")
         self.assertEqual(discussion.user_id, "")
 
     def test_discussion_with_cards(self):
-        """Test Discussion with TarotCard objects"""
-        card = TarotCard(**self.valid_card_data)
+        """Test Discussion with CardLayout objects"""
+        cardlayout_data = {
+            "name": "The Fool",
+            "position": "past",
+            "upright": True,
+            "meaning": "Fresh start",
+            "position_keywords": ["roots"]
+        }
         discussion_data = self.valid_discussion_data.copy()
-        discussion_data["cards_drawn"] = [card]
-        
+        discussion_data["cards_drawn"] = [cardlayout_data]
         discussion = Discussion(**discussion_data)
-        
         self.assertEqual(len(discussion.cards_drawn), 1)
-        self.assertIsInstance(discussion.cards_drawn[0], TarotCard)
+        from app.models import CardLayout
+        self.assertIsInstance(discussion.cards_drawn[0], CardLayout)
         self.assertEqual(discussion.cards_drawn[0].name, "The Fool")
 
     def test_followup_question_valid_creation(self):

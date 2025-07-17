@@ -18,17 +18,7 @@ All endpoints are prefixed with `/genai`. All responses are in JSON format.
 
 ---
 
-## 2. Simple Prediction
-
-**GET `/genai/predict`**
-- Parameters:
-  - `question` (string, required): The question for prediction
-  - `user_id` (string, optional): User ID
-- Returns: Prediction result, question ID, discussion ID, etc.
-
----
-
-## 3. Daily Tarot Reading
+## 2. Daily Tarot Reading
 
 **GET `/genai/daily-reading`**
 - Parameters:
@@ -37,16 +27,7 @@ All endpoints are prefixed with `/genai`. All responses are in JSON format.
 
 ---
 
-## 4. User Discussions List
-
-**GET `/genai/discussions/{user_id}`**
-- Path Parameter:
-  - `user_id` (string): User ID
-- Returns: All discussions for the user
-
----
-
-## 5. Discussion Details
+## 4. Discussion Details
 
 **GET `/genai/discussion/{discussion_id}`**
 - Path Parameter:
@@ -61,7 +42,6 @@ All endpoints are prefixed with `/genai`. All responses are in JSON format.
 - Body (JSON):
   - `user_id` (string): User ID
   - `initial_question` (string): Initial question
-  - `topic` (string): Topic
 - Returns: New discussion details, drawn cards, initial interpretation
 
 ---
@@ -108,13 +88,6 @@ All endpoints are prefixed with `/genai`. All responses are in JSON format.
 
 ---
 
-## 11. Context Statistics
-
-**GET `/genai/feedback/contexts/stats`**
-- Returns: Statistics about stored reading contexts
-
----
-
 ## 12. Enhanced Reading
 
 **POST `/genai/reading/enhanced`**
@@ -124,17 +97,6 @@ All endpoints are prefixed with `/genai`. All responses are in JSON format.
   - `cards` (list): Card information
   - `user_id` (string): User ID
 - Returns: Enhanced interpretation
-
----
-
-## 13. Find Similar Contexts
-
-**GET `/genai/feedback/contexts/similar`**
-- Parameters:
-  - `question` (string): Question
-  - `cards` (string): Card information (JSON string)
-  - `limit` (integer): Number of results
-- Returns: Similar reading contexts
 
 ---
 

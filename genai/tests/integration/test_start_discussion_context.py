@@ -8,6 +8,7 @@ import os
 import sys
 import json
 from datetime import datetime
+import uuid
 
 # Add the genai directory to the path (parent of tests)
 sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
@@ -40,31 +41,11 @@ def test_weaviate_connection():
 
 def create_test_cards():
     """Create test tarot cards."""
+    from app.models import CardLayout
     return [
-        TarotCard(
-            name="The Fool",
-            arcana="Major",
-            number="0",
-            keywords=["new beginnings", "spontaneity", "innocence"],
-            meanings_light=["freedom", "adventure", "new journey"],
-            meanings_shadow=["recklessness", "foolishness", "carelessness"]
-        ),
-        TarotCard(
-            name="The Magician",
-            arcana="Major",
-            number="I",
-            keywords=["manifestation", "willpower", "desire", "creation"],
-            meanings_light=["skill", "diplomacy", "address", "subtlety"],
-            meanings_shadow=["disgrace", "disloyalty", "inability", "weakness"]
-        ),
-        TarotCard(
-            name="The High Priestess", 
-            arcana="Major",
-            number="II",
-            keywords=["intuition", "sacred knowledge", "divine feminine"],
-            meanings_light=["wisdom", "sound judgment", "common sense"],
-            meanings_shadow=["ignorance", "lack of understanding", "selfishness"]
-        )
+        CardLayout(name="The Fool", position="past", upright=True, meaning="freedom", position_keywords=["new beginnings"]),
+        CardLayout(name="The Magician", position="present", upright=True, meaning="skill", position_keywords=["manifestation"]),
+        CardLayout(name="The High Priestess", position="future", upright=True, meaning="wisdom", position_keywords=["intuition"])
     ]
 
 def setup_feedback_context():
@@ -116,15 +97,21 @@ def test_start_discussion_with_context():
         print("\n📝 Test 1: Starting career-related discussion...")
         discussion = start_discussion(
             user_id="test_context_user",
+            discussion_id= uuid.uuid4().hex, 
             initial_question="What should I focus on to grow my career?",
-            topic="Career Growth and Development",
             client=client
         )
         
         print(f"✅ Discussion created: {discussion.discussion_id}")
-        print(f"📋 Topic: {discussion.topic}")
         print(f"❓ Question: {discussion.initial_question}")
         print(f"🃏 Cards drawn: {[card.name for card in discussion.cards_drawn]}")
+        # CardLayout fields check
+        card = discussion.cards_drawn[0]
+        assert hasattr(card, "name")
+        assert hasattr(card, "position")
+        assert hasattr(card, "upright")
+        assert hasattr(card, "meaning")
+        assert hasattr(card, "position_keywords")
         print(f"📖 Response length: {len(discussion.initial_response)} characters")
         
         # Check if response contains context enhancement indicators
@@ -153,15 +140,20 @@ def test_start_discussion_with_context():
         print("\n📝 Test 2: Starting relationship-related discussion...")
         discussion2 = start_discussion(
             user_id="test_context_user_2",
+            discussion_id=uuid.uuid4().hex,
             initial_question="What can I expect in my love life?",
-            topic="Love and Relationships",
             client=client
         )
         
         print(f"✅ Discussion created: {discussion2.discussion_id}")
-        print(f"📋 Topic: {discussion2.topic}")
         print(f"❓ Question: {discussion2.initial_question}")
         print(f"🃏 Cards drawn: {[card.name for card in discussion2.cards_drawn]}")
+        card2 = discussion2.cards_drawn[0]
+        assert hasattr(card2, "name")
+        assert hasattr(card2, "position")
+        assert hasattr(card2, "upright")
+        assert hasattr(card2, "meaning")
+        assert hasattr(card2, "position_keywords")
         
         # Check for context enhancement
         response_text2 = discussion2.initial_response
@@ -190,12 +182,19 @@ def test_response_comparison():
         print("📝 Creating baseline discussion...")
         baseline_discussion = start_discussion(
             user_id="baseline_user",
+            discussion_id=uuid.uuid4().hex,
             initial_question="How can I improve my professional skills?",
-            topic="Professional Development",
             client=client
         )
         
         print(f"📏 Baseline response length: {len(baseline_discussion.initial_response)} characters")
+        # CardLayout fields check
+        card = baseline_discussion.cards_drawn[0]
+        assert hasattr(card, "name")
+        assert hasattr(card, "position")
+        assert hasattr(card, "upright")
+        assert hasattr(card, "meaning")
+        assert hasattr(card, "position_keywords")
         
         # Now add some feedback context via API
         print("\n🔧 Adding feedback context via API...")
@@ -219,12 +218,18 @@ def test_response_comparison():
         print("📝 Creating context-enhanced discussion...")
         enhanced_discussion = start_discussion(
             user_id="enhanced_user",
+            discussion_id=uuid.uuid4().hex,
             initial_question="What skills should I focus on developing?",
-            topic="Skill Development",
             client=client
         )
         
         print(f"📏 Enhanced response length: {len(enhanced_discussion.initial_response)} characters")
+        card2 = enhanced_discussion.cards_drawn[0]
+        assert hasattr(card2, "name")
+        assert hasattr(card2, "position")
+        assert hasattr(card2, "upright")
+        assert hasattr(card2, "meaning")
+        assert hasattr(card2, "position_keywords")
         
         # Compare responses
         baseline_len = len(baseline_discussion.initial_response)

@@ -3,7 +3,7 @@ import os
 from string import Template
 from typing import List, Tuple
 from functools import lru_cache
-from app.models import TarotCard
+from app.models import TarotCard, CardLayout
 
 @lru_cache(maxsize=2)
 def load_tarot_template(path: str = None) -> str:
@@ -16,66 +16,24 @@ def load_tarot_template(path: str = None) -> str:
     with open(path, "r", encoding="utf-8") as f:
         return f.read()
 
-def render_card_blocks(picks: List[Tuple[TarotCard, bool, str, str, List[str]]]) -> str:
+def render_card_blocks(picks: List[CardLayout]) -> str:
     """
-    Render card information blocks - extracted to avoid duplication
-    Returns formatted cards text ready for template substitution
+    Render card information blocks for CardLayout objects.
     """
     cards_lines = []
-    for card, upright, meaning, pos, position_keywords in picks:
-        orient = "Upright" if upright else "Reversed"
-        
+    for card in picks:
+        orient = "Upright" if card.upright else "Reversed"
         card_info = []
-        card_info.append(f"- [{pos.capitalize()}] {card.name}")
-        
-        if card.arcana:
-            card_info.append(f"  Arcana: {card.arcana}")
-        if hasattr(card, 'number') and card.number:
-            card_info.append(f"  Number: {card.number}")
-        if hasattr(card, 'suit') and card.suit:
-            card_info.append(f"  Suit: {card.suit}")
-        
+        card_info.append(f"- [{card.position.capitalize()}] {card.name}")
         card_info.append(f"  Orientation: {orient}")
-        card_info.append(f"  Meaning: {meaning}")
-        
-        if card.keywords:
-            keywords_text = ", ".join(card.keywords)
-            card_info.append(f"  Keywords: {keywords_text}")
-        
-        if card.fortune_telling:
-            fortune_text = " | ".join(card.fortune_telling)
-            card_info.append(f"  Fortune Telling: {fortune_text}")
-        
-        if upright and card.meanings_light:
-            light_meanings = " | ".join(card.meanings_light)
-            card_info.append(f"  Light Meanings: {light_meanings}")
-        elif not upright and card.meanings_shadow:
-            shadow_meanings = " | ".join(card.meanings_shadow)
-            card_info.append(f"  Shadow Meanings: {shadow_meanings}")
-        
-        if position_keywords:
-            card_info.append(f"  Position Keywords: {', '.join(position_keywords)}")
-        
-        # Handle optional attributes consistently
-        for attr in ['archetype', 'hebrew_alphabet', 'numerology', 'elemental', 'mythical_spiritual']:
-            if hasattr(card, attr) and getattr(card, attr):
-                display_name = attr.replace('_', ' ').title()
-                card_info.append(f"  {display_name}: {getattr(card, attr)}")
-        
-        if hasattr(card, 'keywordsMeaning') and card.keywordsMeaning:
-            keyword_meanings = []
-            for km in card.keywordsMeaning:
-                keyword_meanings.append(f"{km.keyword}: {km.meaning}")
-            if keyword_meanings:
-                card_info.append(f"  Keyword Meanings: {' | '.join(keyword_meanings)}")
-        
-        card_text = "\n".join(card_info)
-        cards_lines.append(card_text)
-    
+        card_info.append(f"  Meaning: {card.meaning}")
+        if card.position_keywords:
+            card_info.append(f"  Position Keywords: {', '.join(card.position_keywords)}")
+        cards_lines.append("\n".join(card_info))
     return "\n\n".join(cards_lines)
 
 def render_prompt(template_str: str, question: str, 
-                  picks: List[Tuple[TarotCard, bool, str, str, List[str]]]
+                  picks: List[CardLayout]
                  ) -> str:
     """Render prompt using the basic template"""
     cards_text = render_card_blocks(picks)
@@ -114,7 +72,7 @@ def render_history_context(history: List[dict], max_messages: int = 5) -> str:
 def render_prompt_with_history(
     template_str: str, 
     question: str, 
-    picks: List[Tuple[TarotCard, bool, str, str, List[str]]],
+    picks: List[CardLayout],
     history_context: str = ""
 ) -> str:
     """
@@ -136,7 +94,7 @@ def render_prompt_with_history(
 
 def build_tarot_prompt_smart(
     question: str, 
-    picks: List[Tuple[TarotCard, bool, str, str, List[str]]],
+    picks: List[CardLayout],
     history: List[dict] = None
 ) -> str:
     """

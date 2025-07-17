@@ -11,6 +11,13 @@ class KeywordMeaning(BaseModel):
     orientation: str
     position: int
 
+class CardLayout(BaseModel):
+    name: str               
+    position: str            
+    upright: bool            
+    meaning: str             
+    position_keywords: List[str]  
+
 class TarotCard(BaseModel):
     id: Optional[str] = None
     name: str
@@ -36,8 +43,8 @@ class Discussion(BaseModel):
     created_at: datetime = Field(default_factory=datetime.now)
     topic: Optional[str] = None
     initial_question: str
-    cards_drawn: List[TarotCard] = Field(default_factory=list)
     initial_response: str
+    cards_drawn: List[CardLayout] = Field(default_factory=list)  
     
 class FollowupQuestion(BaseModel):
     question_id: str = Field(default_factory=lambda: str(uuid.uuid4()))
@@ -61,7 +68,7 @@ class FollowupRequest(BaseModel):
 class Feedback(BaseModel):
     user_id: str
     question: str
-    spread: List[TarotCard]
+    spread: List[CardLayout]
     model_response: str
     feedback_text: Optional[str] = None
     rating: Optional[int] = Field(None, ge=1, le=5, description="Rating from 1 to 5, where 4-5 triggers KeywordMeaning update")

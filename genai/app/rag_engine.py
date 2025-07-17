@@ -15,10 +15,13 @@ import weaviate
 from weaviate.classes.query import Filter, Sort
 
 # Local imports
-from app.models import TarotCard, Discussion, FollowupQuestion
+from app.models import TarotCard, Discussion, FollowupQuestion, CardLayout
 from app.prompt_loader import load_tarot_template, render_prompt, build_tarot_prompt_smart
 from app.card_engine import layout_three_card
 from app.logger_config import get_tarot_logger
+from app.weaviate_client import get_weaviate_client
+from app.context_aware_reading import enhance_reading_with_feedback_context
+
 
 # Setup logger
 logger = get_tarot_logger(__name__)
@@ -30,6 +33,33 @@ API_KEY = os.getenv("GEMINI_API_KEY")
 def check_environment_variables():
     if not API_KEY :
         raise RuntimeError("Missing GEMINI_API_KEY in environment")
+
+def fetch_full_deck() -> List[TarotCard]:
+    """Fetch all tarot cards from Weaviate"""
+    logger.info("Fetching full tarot deck from Weaviate")
+    client = get_weaviate_client()
+    try:
+        tarot_col = client.collections.get("TarotCard")
+        # Use the correct API method
+        all_objs = tarot_col.query.fetch_objects(limit=78)  # 78 cards in a tarot deck
+        
+        cards = []
+        for obj in all_objs.objects:
+            card_data = {
+                "name": obj.properties.get("name", ""),
+                "arcana": obj.properties.get("arcana", ""),
+                "meanings_light": obj.properties.get("meanings_light", []),
+                "meanings_shadow": obj.properties.get("meanings_shadow", []),
+                "keywords": obj.properties.get("keywords", []),
+                "fortune_telling": obj.properties.get("fortune_telling", []),
+            }
+            cards.append(TarotCard(**card_data))
+        
+        logger.info(f"Successfully fetched {len(cards)} tarot cards")
+        return cards
+    except Exception as e:
+        logger.error(f"Error fetching deck: {e}")
+        return []
 
 def build_tarot_prompt(question: str, picks):
     template_str = load_tarot_template()  
@@ -87,6 +117,12 @@ def call_gemini_api_with_history(question: str, picks, history: List[dict] = Non
 
 def store_feedback(user_id: str, question: str, feedback: str) -> None:
     # Placeholder for storing feedback
+    """ Store user feedback for a question.
+    This function can be extended to store feedback in a database or file.
+    """
+    logger.info(f"Storing feedback for user {user_id} on question '{question}': {feedback}")
+    # Here you would implement the actual storage logic, e.g.:
+    # with open("feedback.json", "a") as f:
     pass
 
 def store_discussion(discussion: Discussion, client) -> None:
@@ -111,10 +147,6 @@ def store_discussion(discussion: Discussion, client) -> None:
                         data_type=weaviate.classes.config.DataType.TEXT
                     ),
                     weaviate.classes.config.Property(
-                        name="topic",
-                        data_type=weaviate.classes.config.DataType.TEXT
-                    ),
-                    weaviate.classes.config.Property(
                         name="initial_question",
                         data_type=weaviate.classes.config.DataType.TEXT
                     ),
@@ -135,7 +167,6 @@ def store_discussion(discussion: Discussion, client) -> None:
                 "discussion_id": discussion.discussion_id,
                 "user_id": discussion.user_id,
                 "created_at": discussion.created_at.isoformat(),
-                "topic": discussion.topic,
                 "initial_question": discussion.initial_question,
                 "initial_response": discussion.initial_response,
                 "cards_drawn": json.dumps([card.model_dump() for card in discussion.cards_drawn])
@@ -177,7 +208,6 @@ def get_discussion(discussion_id: str, client) -> Optional[Discussion]:
                 "discussion_id": props.get("discussion_id"),
                 "user_id": props.get("user_id"),
                 "created_at": datetime.fromisoformat(props.get("created_at")),
-                "topic": props.get("topic"),
                 "initial_question": props.get("initial_question"),
                 "initial_response": props.get("initial_response"),
                 "cards_drawn": cards_drawn
@@ -273,35 +303,27 @@ def get_discussion_history(discussion_id: str, client) -> List[FollowupQuestion]
         print(f"Error getting discussion history: {e}")
         return []
 
-def build_followup_prompt(question: str, original_cards: List[TarotCard], history: List[FollowupQuestion]) -> str:
+def build_followup_prompt(question: str, original_cards: List[CardLayout], history: List[FollowupQuestion]) -> str:
     """
     Build followup prompt using the original cards from the discussion.
+    TODO: Implement context-aware reading enhancement
     """
     context = ""
     if history:
         context = "Previous conversation context:\n"
         for i, h in enumerate(history, 1):
             context += f"Q{i}: {h.question}\nA{i}: {h.response}\n\n"
-    
-    # Convert TarotCard objects to picks format for build_tarot_prompt
-    # We need to simulate the picks format: (card, upright, meaning, position, position_keywords)
-    picks = []
-    positions = ["past", "present", "future"]
-    for i, card in enumerate(original_cards[:3]):  # Only take first 3 cards
-        position = positions[i] if i < len(positions) else "unknown"
-        upright = True  # Default to upright for followup questions
-        meaning = card.meanings_light if card.meanings_light else ["No meaning available"]
-        position_keywords = ["guidance", "insight", "wisdom"]
-        picks.append((card, upright, meaning, position, position_keywords))
-    
+
+    picks = original_cards[:3]
+
     base_prompt = build_tarot_prompt(question, picks)
-    
+
     if context:
         return f"{context}\nCurrent question based on the same cards:\n{base_prompt}"
     else:
         return base_prompt
 
-def call_gemini_api_followup(question: str, original_cards: List[TarotCard], history: List[FollowupQuestion] = None) -> str:
+def call_gemini_api_followup(question: str, original_cards: List[CardLayout], history: List[FollowupQuestion] = None) -> str:
     """
     Call the Gemini API for followup questions using original cards from the discussion.
     """
@@ -339,7 +361,6 @@ def get_user_discussions_list(user_id: str, client) -> List[Discussion]:
                 "discussion_id": props.get("discussion_id"),
                 "user_id": props.get("user_id"),
                 "created_at": datetime.fromisoformat(props.get("created_at")),
-                "topic": props.get("topic"),
                 "initial_question": props.get("initial_question"),
                 "initial_response": props.get("initial_response"),
                 "cards_drawn": cards_drawn
@@ -351,20 +372,15 @@ def get_user_discussions_list(user_id: str, client) -> List[Discussion]:
         print(f"Error getting user discussions: {e}")
         return []
 
-def start_discussion(user_id: str, initial_question: str, topic: str, client) -> Discussion:
+def start_discussion(user_id: str, discussion_id: str, initial_question: str, client) -> Discussion:
     """
     Start a new discussion with initial question and draw tarot cards.
     This function creates a new discussion, draws cards, generates the initial response,
     and enhances it with feedback context from similar past readings.
     """
-    logger.info(f"Starting new discussion for user {user_id}: {topic}")
+    logger.info(f"Starting new discussion for user {user_id}: {initial_question}")
+    logger.debug(f"New discussion ID: {discussion_id}")
     
-    # Generate unique discussion ID
-    discussion_id = str(uuid.uuid4())
-    logger.debug(f"Generated discussion ID: {discussion_id}")
-    
-    # Fetch full deck and draw cards (only once for the entire discussion)
-    from app.main import fetch_full_deck  # Import here to avoid circular import
     deck = fetch_full_deck()
     if not deck:
         logger.error("Failed to fetch tarot deck")
@@ -372,78 +388,63 @@ def start_discussion(user_id: str, initial_question: str, topic: str, client) ->
     
     logger.info(f"Fetched deck with {len(deck)} cards")
     
-    # Draw cards using three-card layout
     picks = layout_three_card(deck)
     logger.info(f"Drew {len(picks)} cards for reading")
     
-    # Extract TarotCard objects from picks
-    cards_drawn = [card for card, upright, meaning, position, position_keywords in picks]
-    logger.debug(f"Cards drawn: {[card.name for card in cards_drawn]}")
-    
-    # Generate initial response using the drawn cards
+    logger.debug(f"Cards drawn: {[card.name for card in picks]}")
+
     prompt = build_tarot_prompt(initial_question, picks)
     logger.debug(f"Generated prompt length: {len(prompt)} characters")
     
     base_response = call_gemini_api(prompt)
     logger.info(f"Generated base response length: {len(base_response) if base_response else 0} characters")
     
-    # Ensure base_response is not None or empty
     if not base_response:
         base_response = "I apologize, but I was unable to generate a reading at this time. Please try again."
         logger.warning("Using fallback response due to empty base_response")
     
-    # Enhance the response with feedback context
     try:
         logger.info("Attempting to enhance response with feedback context")
-        from app.context_aware_reading import enhance_reading_with_feedback_context
         
         # Enhance the response with context
         enhanced_result = enhance_reading_with_feedback_context(
             question=initial_question,
-            cards=cards_drawn,
+            cards= picks,
             base_interpretation=base_response
         )
         
-        # Extract the enhanced interpretation
         initial_response = enhanced_result.get("enhanced_interpretation", base_response)
         
-        # Check if enhancement was applied
         if "Context Enhancement" in initial_response:
             logger.info(f"Enhanced discussion response with feedback context for user {user_id}")
         else:
             logger.info("No context enhancement applied to response")
         
-        # Log context statistics
         contexts_count = enhanced_result.get("similar_contexts_count", 0)
         confidence_boost = enhanced_result.get("confidence_boost", 0)
         logger.info(f"Context enhancement - Similar contexts: {contexts_count}, Confidence boost: {confidence_boost}")
         
     except Exception as e:
         logger.warning(f"Could not enhance response with context: {e}")
-        # Fall back to base response
         initial_response = base_response
     
-    # Final safety check to ensure initial_response is not None
     if not initial_response:
         initial_response = "I apologize, but I was unable to generate a reading at this time. Please try again."
     
-    # Create discussion object
     discussion = Discussion(
         discussion_id=discussion_id,
         user_id=user_id,
         created_at=datetime.now(),
-        topic=topic,
         initial_question=initial_question,
         initial_response=initial_response,
-        cards_drawn=cards_drawn
+        cards_drawn=picks
     )
     
-    # Store discussion in database
     store_discussion(discussion, client)
     
     return discussion
 
-def parse_cards_drawn(cards_drawn_str: str) -> List[TarotCard]:
+def parse_cards_drawn(cards_drawn_str: str) -> List[CardLayout]:
     """
     Safely parse cards_drawn from Weaviate storage format.
     Handles JSON parsing errors, null values, and various data formats.
@@ -453,26 +454,21 @@ def parse_cards_drawn(cards_drawn_str: str) -> List[TarotCard]:
     
     cards_drawn = []
     try:
-        # First try to parse as JSON
-        # Handle null values in JSON by replacing with proper JSON null
-        cleaned_str = cards_drawn_str.replace("null", "null")  # Keep as valid JSON null
+        cleaned_str = cards_drawn_str.replace("null", "null")  
         cards_data = json.loads(cleaned_str.replace("'", '"'))
         
         if isinstance(cards_data, list):
-            # Filter out null values and create TarotCard objects
-            cards_drawn = [TarotCard(**card_data) for card_data in cards_data if card_data is not None]
+            cards_drawn = [CardLayout(**card_data) for card_data in cards_data if card_data is not None]
         else:
             print(f"Warning: cards_drawn is not a list: {type(cards_data)}")
             
     except (json.JSONDecodeError, TypeError) as e:
         print(f"Error parsing cards_drawn as JSON: {e}")
-        # Fallback to eval if json fails
         try:
-            # For eval, we need to handle null differently
             eval_str = cards_drawn_str.replace("null", "None")
             cards_data = eval(eval_str)
             if isinstance(cards_data, list):
-                cards_drawn = [TarotCard(**card_data) for card_data in cards_data if card_data is not None]
+                cards_drawn = [CardLayout(**card_data) for card_data in cards_data if card_data is not None]
             else:
                 print(f"Warning: eval result is not a list: {type(cards_data)}")
         except Exception as e2:

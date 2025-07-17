@@ -1,7 +1,7 @@
 # reading_engine.py
 import random
 from typing import List, Tuple
-from app.models import TarotCard
+from app.models import TarotCard, CardLayout
 
 POSITION_KEYWORDS = {
     "past":    ["roots", "foundation", "history", "origin"],
@@ -16,7 +16,7 @@ def draw_cards(deck: List[TarotCard], count: int) -> List[Tuple[TarotCard, bool]
 def interpret_card(card: TarotCard, upright: bool) -> str:
     return card.meanings_light if upright else card.meanings_shadow
 
-def layout_three_card(deck, layout_key="three_past_present_future"):
+def layout_three_card(deck, layout_key="three_past_present_future") -> List[CardLayout]:
     drawn = draw_cards(deck, 3)
     positions = ["past", "present", "future"]
     result = []
@@ -24,7 +24,15 @@ def layout_three_card(deck, layout_key="three_past_present_future"):
         pos = positions[i]
         meaning = interpret_card(card, upright)
         position_keywords = POSITION_KEYWORDS[pos]
-        result.append((card, upright, meaning, pos, position_keywords))
+        result.append(
+            CardLayout(
+                name=card.name,
+                position=pos,
+                upright=upright,
+                meaning=" | ".join(meaning) if isinstance(meaning, list) else meaning,
+                position_keywords=position_keywords
+            )
+        )
     return result
 
 def layout_five_card(deck: List[TarotCard]) -> List[Tuple[TarotCard, bool, str]]:
