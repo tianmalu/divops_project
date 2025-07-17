@@ -1,3 +1,4 @@
+
 ### Angular ###
 ## Angular ##
 # compiled output
@@ -377,7 +378,16 @@ sketch
 # gitignore template for Vue.js projects
 #
 # Recommended template: Node.gitignore
-.terraform/
-**/.terraform/
-**/.terraform.lock.hcl
-**/terraform.tfstate*
+
+# Kube Config
+.kube
+
+
+
+# Terraform
+
+.terraform.lock.hcl
+terraform.tfstate
+tfplan
+*.terraform
+/terraform/terraform-provider-aws*
