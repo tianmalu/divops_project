@@ -1,4 +1,5 @@
 services:
+  # Client
   client:
     container_name: client
     build: 
@@ -17,3 +18,48 @@ services:
       WATCHPACK_POLLING: true
     stdin_open: true
     tty: true
+  # --------------- Users Microservice DB + Service
+  # Users DB
+  users-db:
+    image: postgres:16
+    container_name: users-db
+    environment:
+      POSTGRES_DB: users_db
+      POSTGRES_USER: users_db_username
+      POSTGRES_PASSWORD: users_db_password
+    ports:
+      - "5432:5432"
+    volumes:
+      - users_db_data:/var/lib/postgresql/data
+    networks:
+      - app-network
+  # Users Microservice
+  users-service:
+    container_name: users-service
+    build:
+      context: ./new_server/users
+      dockerfile: Dockerfile.dev
+    volumes:
+      - ./new_server/users/src:/app/src
+    stdin_open: true
+    tty: true
+    ports:
+      - "8081:8080"
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://users-db:5432/users_db
+      SPRING_DATASOURCE_USERNAME: users_db_username
+      SPRING_DATASOURCE_PASSWORD: users_db_password
+      SPRING_PROFILES_ACTIVE: dev
+      SPRING_DEVTOOLS_RESTART_ENABLED: true
+      SPRING_DEVTOOLS_RESTART_POLLING: true
+    depends_on:
+      - users-db
+    networks:
+      - app-network
+
+volumes:
+  users_db_data:
+
+networks:
+  app-network:
+    driver: bridge

@@ -1,0 +1,21 @@
+FROM gradle:8.0-jdk17
+
+WORKDIR /app
+
+# Copy gradle wrapper and build files
+COPY gradlew .
+COPY gradlew.bat .
+COPY build.gradle .
+COPY settings.gradle .
+COPY gradle gradle
+
+# Copy source code (mount as volume later for live reload)
+COPY src src
+
+RUN chmod +x gradlew
+
+# Build project once to cache dependencies
+RUN ./gradlew build -x test --no-daemon
+
+# Run bootRun with devtools, watch mounted source for changes
+CMD ["./gradlew", "bootRun", "--no-daemon"]
