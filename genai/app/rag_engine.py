@@ -116,14 +116,32 @@ def call_gemini_api_with_history(question: str, picks, history: List[dict] = Non
     return call_gemini_api(prompt)
 
 def store_feedback(user_id: str, question: str, feedback: str) -> None:
-    # Placeholder for storing feedback
-    """ Store user feedback for a question.
-    This function can be extended to store feedback in a database or file.
-    """
+    """Store user feedback for a question in a local JSON file (feedback.json)."""
     logger.info(f"Storing feedback for user {user_id} on question '{question}': {feedback}")
-    # Here you would implement the actual storage logic, e.g.:
-    # with open("feedback.json", "a") as f:
-    pass
+    feedback_entry = {
+        "user_id": user_id,
+        "question": question,
+        "feedback": feedback,
+        "timestamp": datetime.now().isoformat()
+    }
+    feedback_file = os.path.join(os.path.dirname(__file__), "feedback.json")
+    try:
+        # Read existing feedbacks
+        if os.path.exists(feedback_file):
+            with open(feedback_file, "r", encoding="utf-8") as f:
+                data = json.load(f)
+            if not isinstance(data, list):
+                data = []
+        else:
+            data = []
+        # Append new feedback
+        data.append(feedback_entry)
+        # Write back
+        with open(feedback_file, "w", encoding="utf-8") as f:
+            json.dump(data, f, ensure_ascii=False, indent=2)
+        logger.info("Feedback stored successfully.")
+    except Exception as e:
+        logger.error(f"Failed to store feedback: {e}")
 
 def store_discussion(discussion: Discussion, client) -> None:
     """
