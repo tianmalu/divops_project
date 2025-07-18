@@ -1,0 +1,28 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: team-divops-genai
+  namespace: "genai-app"
+spec:
+  replicas: {{ .Values.genai.replicaCount }}
+  selector:
+    matchLabels:
+      app: team-divops-genai
+  template:
+    metadata:
+      labels:
+        app: team-divops-genai
+    spec:
+      containers:
+        - name: genai
+          image: "{{ .Values.genai.image.repository }}:{{ .Values.genai.image.tag }}"
+          imagePullPolicy: {{ .Values.genai.image.pullPolicy }}
+          resources:
+            limits:
+              cpu: "500m"
+              memory: "256Mi"
+            requests:
+              cpu: "50m"
+              memory: "50Mi"
+          ports:
+            - containerPort: {{ .Values.genai.service.targetPort }}
