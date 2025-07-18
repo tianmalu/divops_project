@@ -92,28 +92,45 @@ jobs:
         run: docker push ${{ env.IMAGE_REPOSITORY }}:${{ steps.set-tag.outputs.image_tag }}
 
   deploy-helm:
-      name: Deploy Helm Chart
-      runs-on: ubuntu-latest
-      needs: build-and-push-genai-app
-      env:
-        IMAGE_TAG: ${{ needs.build-and-push-genai-app.outputs.IMAGE_TAG }}
-      steps:
-        - name: Checkout repository
-          uses: actions/checkout@v4
-        - name: Set up kubectl
-          uses: azure/setup-kubectl@v3
-          with:
-            version: 'latest'
-        - name: Set up Helm
-          uses: azure/setup-helm@v3
-          with:
-            version: 'latest'
-        - name: Create .kube directory
-          run: mkdir -p $HOME/.kube
-        - name: Configure kubeconfig
-          run: echo "${{ secrets.GENAI_KUBECONFIG }}" > $HOME/.kube/config
-        - name: Deploy Helm Chart with SHA tag
-          run: helm upgrade --install $RELEASE_NAME $HELM_CHART_PATH --namespace $KUBE_NAMESPACE --set genai.image.repository=$IMAGE_REPOSITORY --set genai.image.tag=$IMAGE_TAG --force --wait
+    name: Deploy Helm Chart
+    runs-on: ubuntu-latest
+    needs: build-and-push-genai-app
+    env:
+      IMAGE_TAG: ${{ needs.build-and-push-genai-app.outputs.IMAGE_TAG }}
+      HELM_DRIVER: configmap
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up kubectl
+        uses: azure/setup-kubectl@v3
+        with:
+          version: 'latest'
+
+      - name: Set up Helm
+        uses: azure/setup-helm@v3
+        with:
+          version: 'latest'
+
+      - name: Create .kube directory
+        run: mkdir -p $HOME/.kube
+
+      - name: Configure kubeconfig
+        run: echo "${{ secrets.GENAI_KUBECONFIG }}" > $HOME/.kube/config
+
+      - name: Cleanup old Helm secrets (if any)
+        run: |
+          echo "Deleting old Helm secrets in namespace $KUBE_NAMESPACE"
+          kubectl delete secret -n $KUBE_NAMESPACE -l owner=helm || true
+
+      - name: Deploy Helm Chart with SHA tag
+        run: |
+          helm upgrade --install $RELEASE_NAME $HELM_CHART_PATH \
+            --namespace $KUBE_NAMESPACE \
+            --set genai.image.repository=$IMAGE_REPOSITORY \
+            --set genai.image.tag=$IMAGE_TAG \
+            --force --wait
+
 
 
   deploy-aws:
