@@ -40,7 +40,7 @@ jobs:
           echo "WEAVIATE_URL=${{ secrets.WEAVIATE_URL }}" >> ./genai/.env
         working-directory: .
       - name: Run tests
-        run: python tests/test_all_system.py
+        run: python tests/test_all_systems.py
         working-directory: ./genai
 
   build-and-push-genai-app:
