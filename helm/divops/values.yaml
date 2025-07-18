@@ -15,9 +15,32 @@ client:
     targetPort: 80
   replicaCount: 1
 
+genai:
+  image:
+    repository: ghcr.io/aet-devops25/team-divops-genai
+    tag: latest
+    pullPolicy: Always
+  service:
+    type: ClusterIP
+    port: 8000
+    targetPort: 8000
+  replicaCount: 1
+
+secrets:
+  GEMINI_API_KEY: ""
+  WEAVIATE_API_KEY: ""
+  WEAVIATE_URL: ""
+
 ingress:
   enabled: true
   className: "nginx"
   tls: true
   annotations:
     cert-manager.io/cluster-issuer: "letsencrypt-prod"
+  hosts:
+    - host: your-genai-domain.com
+      paths:
+        - path: /
+          pathType: Prefix
+          serviceName: genai
+          servicePort: 8000

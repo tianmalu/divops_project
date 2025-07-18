@@ -1,0 +1,66 @@
+- name: Deploy GenAI Docker Container
+  hosts: ec2
+  become: true
+  vars:
+    docker_image: ghcr.io/aet-devops25/team-divops-genai:latest   # 注意替换为你的 genai 镜像
+    container_name: genai_app
+    app_port: 8000
+  tasks:
+    - name: Install required packages
+      apt:
+        name:
+          - apt-transport-https
+          - ca-certificates
+          - curl
+          - software-properties-common
+        state: present
+        update_cache: yes
+
+    - name: Install python3-docker for Ansible Docker modules
+      apt:
+        name: python3-docker
+        state: present
+        update_cache: yes
+
+    - name: Install Docker package (docker.io)
+      apt:
+        name: docker.io
+        state: present
+        update_cache: yes
+
+    - name: Ensure Docker service is running
+      systemd:
+        name: docker
+        state: started
+        enabled: true
+
+    - name: Pull GenAI Docker image
+      docker_image:
+        name: "{{ docker_image }}"
+        source: pull
+
+    - name: Stop existing container if running
+      docker_container:
+        name: "{{ container_name }}"
+        state: absent
+        force_kill: yes
+      ignore_errors: yes
+
+    - name: Create .env file on EC2
+      copy:
+        dest: /genai/app/.env
+        content: |
+          GEMINI_API_KEY={{ lookup('env', 'GEMINI_API_KEY') }}
+          WEAVIATE_API_KEY={{ lookup('env', 'WEAVIATE_API_KEY') }}
+          WEAVIATE_URL={{ lookup('env', 'WEAVIATE_URL') }}
+      become: true
+
+    - name: Run GenAI container
+      docker_container:
+        name: "{{ container_name }}"
+        image: "{{ docker_image }}"
+        state: started
+        restart_policy: always
+        ports:
+          - "8000:8000"
+        env_file: /genai/app/.env
