@@ -26,11 +26,6 @@ genai:
     targetPort: 8000
   replicaCount: 1
 
-secrets:
-  GEMINI_API_KEY: ""
-  WEAVIATE_API_KEY: ""
-  WEAVIATE_URL: ""
-
 ingress:
   enabled: true
   className: "nginx"

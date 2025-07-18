@@ -26,6 +26,3 @@ spec:
               memory: "50Mi"
           ports:
             - containerPort: {{ .Values.genai.service.targetPort }}
-          envFrom:
-            - secretRef:
-                name: genai-secrets
