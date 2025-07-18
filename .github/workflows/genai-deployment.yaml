@@ -97,7 +97,6 @@ jobs:
     needs: build-and-push-genai-app
     env:
       IMAGE_TAG: ${{ needs.build-and-push-genai-app.outputs.IMAGE_TAG }}
-      HELM_DRIVER: configmap
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
