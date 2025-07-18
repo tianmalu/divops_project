@@ -7,7 +7,7 @@ on:
 env:
   KUBE_NAMESPACE: genai-app
   RELEASE_NAME: team-divops-genai
-  HELM_CHART_PATH: ./helm/divops
+  HELM_CHART_PATH: ./helm/divops/genai
   IMAGE_REPOSITORY: ghcr.io/aet-devops25/team-divops-genai
   AWS_REGION: us-east-1
 
