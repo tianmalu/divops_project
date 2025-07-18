@@ -54,8 +54,8 @@ jobs:
           echo "Server failed to start" && exit 1
 
       - name: Run all tests
-        run: python -m unittest discover tests
-        working-directory: ./genai
+        run: python test_all_systems.py
+        working-directory: ./genai/tests
 
   build-and-push-genai-app:
     name: Build and Push GenAI Docker Image
