@@ -466,34 +466,35 @@ def start_discussion(user_id: str, discussion_id: str, initial_question: str, cl
 def parse_cards_drawn(cards_drawn_str: str) -> List[CardLayout]:
     """
     Safely parse cards_drawn from Weaviate storage format.
-    Returns a list of CardLayout objects. Supports JSON or Python-style strings.
+    Handles JSON parsing errors, null values, and various data formats.
     """
-    if not cards_drawn_str or cards_drawn_str.strip() in {"null", "None", "[]"}:
+    if not cards_drawn_str:
         return []
-
+    
+    cards_drawn = []
     try:
-        # First try JSON format
-        cards_data = json.loads(cards_drawn_str)
-    except json.JSONDecodeError:
+        cleaned_str = cards_drawn_str.replace("null", "null")  
+        cards_data = json.loads(cleaned_str.replace("'", '"'))
+        
+        if isinstance(cards_data, list):
+            cards_drawn = [CardLayout(**card_data) for card_data in cards_data if card_data is not None]
+        else:
+            print(f"Warning: cards_drawn is not a list: {type(cards_data)}")
+            
+    except (json.JSONDecodeError, TypeError) as e:
+        print(f"Error parsing cards_drawn as JSON: {e}")
         try:
-            # Fallback: try Python-style list of dicts
-            cards_data = ast.literal_eval(cards_drawn_str)
-        except Exception as e:
-            print(f"❌ Failed to parse cards_drawn: {e}")
-            return []
-
-    if not isinstance(cards_data, list):
-        print(f"⚠️ cards_drawn is not a list: {type(cards_data)}")
-        return []
-
-    parsed_cards = []
-    for idx, card in enumerate(cards_data):
-        if not isinstance(card, dict):
-            print(f"⚠️ Skipping invalid card at index {idx}: {card}")
-            continue
-        try:
-            parsed_cards.append(CardLayout(**card))
-        except Exception as e:
-            print(f"⚠️ Failed to parse card at index {idx}: {e}")
-
-    return parsed_cards
+            eval_str = cards_drawn_str.replace("null", "None")
+            cards_data = eval(eval_str)
+            if isinstance(cards_data, list):
+                cards_drawn = [CardLayout(**card_data) for card_data in cards_data if card_data is not None]
+            else:
+                print(f"Warning: eval result is not a list: {type(cards_data)}")
+        except Exception as e2:
+            print(f"Error with eval fallback: {e2}")
+            cards_drawn = []
+    except Exception as e:
+        print(f"Unexpected error parsing cards_drawn: {e}")
+        cards_drawn = []
+    
+    return cards_drawn
