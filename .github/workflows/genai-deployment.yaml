@@ -35,12 +35,26 @@ jobs:
         working-directory: ./genai
       - name: Create .env file
         run: |
-          echo "GEMINI_API_KEY=${{ secrets.GEMINI_API_KEY }}" > ./genai/.env
-          echo "WEAVIATE_API_KEY=${{ secrets.WEAVIATE_API_KEY }}" >> ./genai/.env
-          echo "WEAVIATE_URL=${{ secrets.WEAVIATE_URL }}" >> ./genai/.env
+          echo "GEMINI_API_KEY=${{ secrets.GEMINI_API_KEY }}" > ./genai/app/.env
+          echo "WEAVIATE_API_KEY=${{ secrets.WEAVIATE_API_KEY }}" >> ./genai/app/.env
+          echo "WEAVIATE_URL=${{ secrets.WEAVIATE_URL }}" >> ./genai/app/.env
         working-directory: .
-      - name: Run tests
-        run: python tests/test_all_systems.py
+      - name: Run FastAPI in background
+        run: |
+          pip install uvicorn
+          uvicorn app.main:app --host 0.0.0.0 --port 8000 &
+        working-directory: ./genai
+
+      - name: Wait for server to be ready
+        run: |
+          for i in {1..10}; do
+            curl -s http://localhost:8000/health && exit 0
+            sleep 1
+          done
+          echo "Server failed to start" && exit 1
+
+      - name: Run all tests
+        run: python -m unittest discover tests
         working-directory: ./genai
 
   build-and-push-genai-app:
@@ -99,7 +113,7 @@ jobs:
         - name: Configure kubeconfig
           run: echo "${{ secrets.GENAI_KUBECONFIG }}" > $HOME/.kube/config
         - name: Deploy Helm Chart with SHA tag
-          run: helm upgrade --install $RELEASE_NAME $HELM_CHART_PATH --namespace $KUBE_NAMESPACE --set client.image.repository=$IMAGE_REPOSITORY --set client.image.tag=$IMAGE_TAG --force --wait
+          run: helm upgrade --install $RELEASE_NAME $HELM_CHART_PATH --namespace $KUBE_NAMESPACE --set genai.image.repository=$IMAGE_REPOSITORY --set genai.image.tag=$IMAGE_TAG --force --wait
 
 
   deploy-aws:
