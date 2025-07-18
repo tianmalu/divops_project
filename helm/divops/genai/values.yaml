@@ -17,7 +17,6 @@ genai:
 
 ingress:
   enabled: true
-  className: "nginx"
+  host: team-divops-devops25.student.k8s.aet.cit.tum.de
+  path: /genai
   tls: true
-  annotations:
-    cert-manager.io/cluster-issuer: "letsencrypt-prod"
