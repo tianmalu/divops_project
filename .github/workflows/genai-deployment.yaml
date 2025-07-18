@@ -130,7 +130,9 @@ jobs:
             --namespace $KUBE_NAMESPACE \
             --set genai.image.repository=$IMAGE_REPOSITORY \
             --set genai.image.tag=$IMAGE_TAG \
-            --force --wait
+            --force --wait \
+            --history-max 1
+
 
 
 
