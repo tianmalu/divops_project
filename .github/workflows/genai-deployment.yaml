@@ -118,10 +118,12 @@ jobs:
       - name: Configure kubeconfig
         run: echo "${{ secrets.GENAI_KUBECONFIG }}" > $HOME/.kube/config
 
-      - name: Cleanup old Helm secrets (if any)
+      - name: Cleanup old Helm secrets and configmaps (if any)
         run: |
           echo "Deleting old Helm secrets in namespace $KUBE_NAMESPACE"
           kubectl delete secret -n $KUBE_NAMESPACE -l owner=helm || true
+          echo "Deleting old Helm configmaps in namespace $KUBE_NAMESPACE"
+          kubectl delete configmap -n $KUBE_NAMESPACE -l owner=helm || true
 
       - name: Deploy Helm Chart with SHA tag
         run: |
