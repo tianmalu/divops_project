@@ -25,10 +25,11 @@ genai:
     port: 8000
     targetPort: 8000
   replicaCount: 1
-  env:
-    GEMINI_API_KEY: ""
-    WEAVIATE_API_KEY: ""
-    WEAVIATE_URL: ""
+
+secrets:
+  GEMINI_API_KEY: ""
+  WEAVIATE_API_KEY: ""
+  WEAVIATE_URL: ""
 
 ingress:
   enabled: true

@@ -107,7 +107,16 @@ deploy-helm:
       - name: Configure kubeconfig
         run: echo "${{ secrets.KUBECONFIG }}" > $HOME/.kube/config
       - name: Deploy Helm Chart with SHA tag
-        run: helm upgrade --install $RELEASE_NAME $HELM_CHART_PATH --namespace $KUBE_NAMESPACE --set genai.image.repository=$IMAGE_REPOSITORY --set genai.image.tag=$IMAGE_TAG --force --wait
+        run: |
+          helm upgrade --install $RELEASE_NAME $HELM_CHART_PATH \
+            --namespace $KUBE_NAMESPACE \
+            --set genai.image.repository=$IMAGE_REPOSITORY \
+            --set genai.image.tag=$IMAGE_TAG \
+            --set secrets.GEMINI_API_KEY=${{ secrets.GEMINI_API_KEY }} \
+            --set secrets.WEAVIATE_API_KEY=${{ secrets.WEAVIATE_API_KEY }} \
+            --set secrets.WEAVIATE_URL=${{ secrets.WEAVIATE_URL }} \
+            --force --wait
+
 
 deploy-aws:
     name: Deploy To AWS EC2
