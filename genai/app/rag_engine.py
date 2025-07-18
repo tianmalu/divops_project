@@ -485,13 +485,13 @@ def parse_cards_drawn(cards_drawn_str: str) -> List[CardLayout]:
         print(f"Error parsing cards_drawn as JSON: {e}")
         try:
             eval_str = cards_drawn_str.replace("null", "None")
-            cards_data = eval(eval_str)
+            cards_data = ast.literal_eval(eval_str)  
             if isinstance(cards_data, list):
                 cards_drawn = [CardLayout(**card_data) for card_data in cards_data if card_data is not None]
             else:
                 print(f"Warning: eval result is not a list: {type(cards_data)}")
         except Exception as e2:
-            print(f"Error with eval fallback: {e2}")
+            print(f"Error with literal_eval fallback: {e2}")
             cards_drawn = []
     except Exception as e:
         print(f"Unexpected error parsing cards_drawn: {e}")

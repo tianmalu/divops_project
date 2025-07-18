@@ -39,6 +39,8 @@ class TestDiscussionAPI(unittest.TestCase):
         self.assertIn("meaning", card)
         self.assertIn("position_keywords", card)
 
+        time.sleep(3) 
+
         # Followup question
         followup_data = {
             "question": "Can you provide more details about the present situation card?"
