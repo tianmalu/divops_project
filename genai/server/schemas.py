@@ -99,9 +99,9 @@ class ReadingResponse(BaseModel):
 
 class StartDiscussionRequest(BaseModel):
     """Request to start a new discussion with initial question"""
+    discussion_id: str = Field(default_factory=lambda: str(uuid.uuid4()), description="Unique discussion ID")
     user_id: str = Field(..., description="User ID")
     initial_question: str = Field(..., min_length=1, max_length=500, description="Initial question to start discussion")
-    topic: str = Field(..., min_length=1, max_length=200, description="Discussion topic/title")
     
     @field_validator('initial_question')
     @classmethod
@@ -109,19 +109,11 @@ class StartDiscussionRequest(BaseModel):
         if len(v.strip()) == 0:
             raise ValueError('Initial question cannot be empty')
         return v.strip()
-    
-    @field_validator('topic')
-    @classmethod
-    def validate_topic(cls, v):
-        if len(v.strip()) == 0:
-            raise ValueError('Topic cannot be empty')
-        return v.strip()
 
 class StartDiscussionResponse(BaseModel):
     """Response after starting a new discussion"""
     discussion_id: str = Field(..., description="Generated discussion ID")
     user_id: str = Field(..., description="User ID")
-    topic: str = Field(..., description="Discussion topic")
     initial_question: str = Field(..., description="Initial question")
     initial_response: str = Field(..., description="AI response to initial question")
     cards_drawn: List[Dict[str, Any]] = Field(..., description="Cards drawn for this discussion")

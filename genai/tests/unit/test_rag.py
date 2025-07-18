@@ -9,6 +9,7 @@ import os
 from datetime import datetime
 from unittest.mock import patch, Mock, MagicMock
 import unittest
+import uuid
 
 # Add the genai directory to the Python path to find app module
 sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
@@ -26,37 +27,32 @@ from app.rag_engine import (
     store_followup_question,
     call_gemini_api_followup
 )
-from app.models import TarotCard, Discussion, FollowupQuestion
+from app.models import TarotCard, Discussion, FollowupQuestion, CardLayout
 
 class TestRAGEngine(unittest.TestCase):
     """Test suite for RAG engine functionality"""
     def setUp(self):
-        """Setup test data"""
-        self.sample_card = TarotCard(
+        self.sample_cardlayout = CardLayout(
             name="The Fool",
-            arcana="Major",
-            img="https://example.com/fool.jpg",
-            keywords=["new beginnings", "innocence", "spontaneity"],
-            meanings_light=["Fresh start", "Unlimited potential", "New adventure"],
-            meanings_shadow=["Recklessness", "Naivety", "Foolishness"]
+            position="past",
+            upright=True,
+            meaning="New beginnings",
+            position_keywords=["roots", "potential"]
         )
-        
+        self.sample_card = self.sample_cardlayout
         self.sample_picks = [
-            (self.sample_card, True, "Fresh start", "past", ["new beginnings"]),
-            (self.sample_card, False, "Recklessness", "present", ["naivety"]),
-            (self.sample_card, True, "New adventure", "future", ["spontaneity"])
+            CardLayout(name="The Fool", position="past", upright=True, meaning="Fresh start", position_keywords=["new beginnings"]),
+            CardLayout(name="The Fool", position="present", upright=False, meaning="Recklessness", position_keywords=["naivety"]),
+            CardLayout(name="The Fool", position="future", upright=True, meaning="New adventure", position_keywords=["spontaneity"])
         ]
-        
         self.sample_discussion = Discussion(
             discussion_id="test_discussion_123",
             user_id="test_user_456",
-            topic="Love and Relationships",
             initial_question="Will I find love this year?",
             initial_response="The cards suggest new opportunities...",
-            cards_drawn=[self.sample_card],
+            cards_drawn=[self.sample_cardlayout],
             created_at=datetime.now()
         )
-        
         self.sample_followup = FollowupQuestion(
             question_id="test_question_789",
             discussion_id="test_discussion_123",
@@ -69,15 +65,11 @@ class TestRAGEngine(unittest.TestCase):
     def test_build_tarot_prompt_basic(self):
         """Test basic tarot prompt building"""
         question = "What should I focus on today?"
-        
         with patch('app.rag_engine.load_tarot_template') as mock_template, \
              patch('app.rag_engine.render_prompt') as mock_render:
-            
             mock_template.return_value = "Question: {question}\nCards: {cards_section}"
             mock_render.return_value = "Rendered prompt with cards"
-            
             result = build_tarot_prompt(question, self.sample_picks)
-            
             self.assertEqual(result, "Rendered prompt with cards")
             mock_template.assert_called_once()
             mock_render.assert_called_once_with("Question: {question}\nCards: {cards_section}", question, self.sample_picks)
@@ -86,12 +78,9 @@ class TestRAGEngine(unittest.TestCase):
     def test_build_tarot_prompt_with_history_no_history(self):
         """Test tarot prompt building without history"""
         question = "What should I focus on today?"
-        
         with patch('app.rag_engine.build_tarot_prompt_smart') as mock_smart_prompt:
             mock_smart_prompt.return_value = "Smart prompt without history"
-            
             result = build_tarot_prompt_with_history(question, self.sample_picks)
-            
             self.assertEqual(result, "Smart prompt without history")
             mock_smart_prompt.assert_called_once_with(question, self.sample_picks, None)
             print("✓ Tarot prompt building without history test passed")
@@ -103,12 +92,9 @@ class TestRAGEngine(unittest.TestCase):
             {"question": "What should I focus on?", "response": "Focus on relationships"},
             {"question": "Why relationships?", "response": "Because connection is key"}
         ]
-        
         with patch('app.rag_engine.build_tarot_prompt_smart') as mock_smart_prompt:
             mock_smart_prompt.return_value = "Smart prompt with history"
-            
             result = build_tarot_prompt_with_history(question, self.sample_picks, history)
-            
             self.assertEqual(result, "Smart prompt with history")
             mock_smart_prompt.assert_called_once_with(question, self.sample_picks, history)
             print("✓ Tarot prompt building with history test passed")
@@ -162,21 +148,17 @@ class TestRAGEngine(unittest.TestCase):
     def test_build_followup_prompt(self):
         """Test followup prompt building"""
         question = "How can I prepare for love?"
-        original_cards = [self.sample_card]
+        original_cards = [self.sample_cardlayout]
         history = [self.sample_followup]
-        
         result = build_followup_prompt(question, original_cards, history)
-        
         self.assertIsInstance(result, str)
         self.assertIn(question, result)
         self.assertIn("The Fool", result)
-        # Remove assertion for 'cards drawn' since actual output uses 'drawn cards and their interpretations'
         self.assertIn("drawn cards", result.lower())
         print("\u2713 Followup prompt building test passed")
 
     def test_start_discussion(self):
         """Test starting a new discussion"""
-        # Only patch attributes that exist in rag_engine
         with patch('app.rag_engine.layout_three_card') as mock_layout, \
              patch('app.rag_engine.build_tarot_prompt') as mock_build_prompt, \
              patch('app.rag_engine.call_gemini_api') as mock_gemini, \
@@ -186,46 +168,37 @@ class TestRAGEngine(unittest.TestCase):
             mock_gemini.return_value = "AI response"
             mock_store.return_value = None
             mock_client = Mock()
-            
             result = start_discussion(
                 user_id="test_user",
+                discussion_id=uuid.uuid4().hex,
                 initial_question="Will I find love?",
-                topic="Love",
                 client=mock_client
             )
-            
             self.assertIsInstance(result, Discussion)
             self.assertEqual(result.user_id, "test_user")
             self.assertEqual(result.initial_question, "Will I find love?")
-            self.assertEqual(result.topic, "Love")
             self.assertEqual(result.initial_response, "AI response")
             print("\u2713 Start discussion test passed")
 
     def test_get_discussion_found(self):
         """Test getting an existing discussion"""
         with patch('app.rag_engine.parse_cards_drawn') as mock_parse:
-            mock_parse.return_value = [self.sample_card]
-            
+            mock_parse.return_value = [self.sample_cardlayout]
             mock_client = Mock()
             mock_collection = Mock()
             mock_client.collections.exists.return_value = True
             mock_client.collections.get.return_value = mock_collection
-            
-            # Mock query result
             mock_obj = Mock()
             mock_obj.properties = {
                 "discussion_id": "test_discussion_123",
                 "user_id": "test_user_456",
-                "topic": "Love and Relationships",
                 "initial_question": "Will I find love?",
                 "initial_response": "The cards suggest...",
                 "cards_drawn": "mock_cards_data",
                 "created_at": datetime.now().isoformat()
             }
             mock_collection.query.fetch_objects.return_value = Mock(objects=[mock_obj])
-            
             result = get_discussion("test_discussion_123", mock_client)
-            
             self.assertIsInstance(result, Discussion)
             self.assertEqual(result.discussion_id, "test_discussion_123")
             self.assertEqual(result.user_id, "test_user_456")
@@ -273,28 +246,22 @@ class TestRAGEngine(unittest.TestCase):
     def test_get_user_discussions_list(self):
         """Test getting user discussions list"""
         with patch('app.rag_engine.parse_cards_drawn') as mock_parse:
-            mock_parse.return_value = [self.sample_card]
-            
+            mock_parse.return_value = [self.sample_cardlayout]
             mock_client = Mock()
             mock_collection = Mock()
             mock_client.collections.exists.return_value = True
             mock_client.collections.get.return_value = mock_collection
-            
-            # Mock query result
             mock_obj = Mock()
             mock_obj.properties = {
                 "discussion_id": "test_discussion_123",
                 "user_id": "test_user_456",
-                "topic": "Love and Relationships",
                 "initial_question": "Will I find love?",
                 "initial_response": "The cards suggest...",
                 "cards_drawn": "mock_cards_data",
                 "created_at": datetime.now().isoformat()
             }
             mock_collection.query.fetch_objects.return_value = Mock(objects=[mock_obj])
-            
             result = get_user_discussions_list("test_user_456", mock_client)
-            
             self.assertIsInstance(result, list)
             self.assertEqual(len(result), 1)
             self.assertIsInstance(result[0], Discussion)
