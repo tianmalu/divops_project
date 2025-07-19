@@ -71,10 +71,11 @@ app = FastAPI(
     title="TarotAI GenAI Service", 
     version="1.0.0",
     description="AI-powered tarot reading service with comprehensive reading types",
-    lifespan=lifespan
+    lifespan=lifespan,
+    root_path="/genai"
 )
 
-@app.get("/genai/health")
+@app.get("/health")
 async def health_check():
     """Health check endpoint with feedback system status."""
     try:
@@ -110,7 +111,7 @@ async def health_check():
             "error": str(e)
         }
 
-@app.get("/genai/daily-reading")
+@app.get("/daily-reading")
 async def daily_reading(
     user_id: Optional[str] = Query(None, description="User ID for tracking daily reading")
 ):
@@ -138,7 +139,7 @@ async def daily_reading(
         raise HTTPException(status_code=500, detail="Failed to generate daily reading")
 
 
-@app.post("/genai/discussion/start")
+@app.post("/discussion/start")
 async def start_new_discussion(req: StartDiscussionRequest):
     try:
         logger.info(f"Starting new discussion for user {req.user_id}: {req.initial_question}")
@@ -186,7 +187,7 @@ async def start_new_discussion(req: StartDiscussionRequest):
         if 'client' in locals():
             client.close()
 
-@app.post("/genai/discussion/{discussion_id}/followup")
+@app.post("/discussion/{discussion_id}/followup")
 async def ask_followup_question(discussion_id: str, req: FollowupQuestionRequest):
     """Ask a followup question in an existing discussion."""
     try:
@@ -241,7 +242,7 @@ async def ask_followup_question(discussion_id: str, req: FollowupQuestionRequest
         if 'client' in locals():
             client.close()
 
-@app.post("/genai/discussion/{discussion_id}/feedback")
+@app.post("/discussion/{discussion_id}/feedback")
 async def submit_discussion_feedback(discussion_id: str, feedback_data: dict):
     """Submit feedback for a discussion with rating and accuracy assessment."""
     try:
@@ -280,7 +281,7 @@ async def submit_discussion_feedback(discussion_id: str, feedback_data: dict):
         if 'client' in locals():
             client.close()
 
-@app.get("/genai/feedback/stats")
+@app.get("/feedback/stats")
 async def get_feedback_statistics(user_id: Optional[str] = Query(None, description="Optional user ID to filter statistics")):
     """Get feedback statistics for analysis."""
     try:
@@ -295,7 +296,7 @@ async def get_feedback_statistics(user_id: Optional[str] = Query(None, descripti
         logger.error(f"Failed to get feedback statistics: {e}")
         raise HTTPException(status_code=500, detail=f"Failed to get feedback statistics: {str(e)}")
 
-@app.get("/genai/feedback/discussion/{discussion_id}")
+@app.get("/feedback/discussion/{discussion_id}")
 async def get_discussion_feedback(discussion_id: str):
     """Get feedback for a specific discussion."""
     try:

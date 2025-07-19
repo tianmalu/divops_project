@@ -27,7 +27,6 @@ class TestDiscussionAPI(unittest.TestCase):
         response = requests.post(f"{BASE_URL}/discussion/start", json=start_discussion_data)
         self.assertEqual(response.status_code, 200, f"Failed to start discussion: {response.text}")
         discussion_data = response.json()
-        print("Status:", response.status_code, "Text:", response.text)
         discussion_id = discussion_data["discussion_id"]
         self.assertEqual(discussion_data["initial_question"], start_discussion_data["initial_question"])
         self.assertTrue(len(discussion_data["cards_drawn"]) > 0)
