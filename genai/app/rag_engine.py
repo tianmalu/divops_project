@@ -196,33 +196,33 @@ def store_discussion(discussion: Discussion, client) -> None:
         print(f"Error storing discussion: {e}")
 
 def get_discussion(discussion_id: str, client) -> Optional[Discussion]:
-    """
-    Get a discussion by its ID from Weaviate.
-    """
     try:
         if not client.collections.exists("Discussion"):
+            print("[DEBUG] Discussion collection does not exist")
             return None
-            
+
         discussion_col = client.collections.get("Discussion")
-        result = discussion_col.query.fetch_objects(
-            limit=100  # Reasonable limit to avoid fetching too many objects
-        )
-        
-        # Filter manually since Weaviate client doesn't support where parameter
+        try:
+            result = discussion_col.query.fetch_objects(
+                where=Filter.by_property("discussion_id").equal(discussion_id),
+                limit=1
+            )
+        except Exception as e:
+            print(f"[DEBUG] Where query not supported, fallback to full scan: {e}")
+            result = discussion_col.query.fetch_objects(limit=1000)
+
         found_discussion = None
         for obj in result.objects:
+            print(f"[DEBUG] Found discussion_id in DB: {obj.properties.get('discussion_id')}")
             if obj.properties.get("discussion_id") == discussion_id:
                 found_discussion = obj
                 break
-        
+
         if found_discussion:
-            obj = found_discussion
-            props = obj.properties
-            
+            props = found_discussion.properties
             cards_drawn = []
             if props.get("cards_drawn"):
                 cards_drawn = parse_cards_drawn(props.get("cards_drawn"))
-            
             discussion_data = {
                 "discussion_id": props.get("discussion_id"),
                 "user_id": props.get("user_id"),
@@ -232,6 +232,7 @@ def get_discussion(discussion_id: str, client) -> Optional[Discussion]:
                 "cards_drawn": cards_drawn
             }
             return Discussion(**discussion_data)
+        print("[DEBUG] No matching discussion_id found")
         return None
     except Exception as e:
         print(f"Error getting discussion: {e}")

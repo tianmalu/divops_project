@@ -187,6 +187,38 @@ async def start_new_discussion(req: StartDiscussionRequest):
         if 'client' in locals():
             client.close()
 
+@app.post("/discussion/{discussion_id}")
+async def get_discussion_details(discussion_id: str):
+    """Retrieve discussion details by discussion_id."""
+    try:
+        logger.info(f"Retrieving discussion details for ID: {discussion_id}")
+        
+        client = get_weaviate_client()
+        
+        # Get discussion from Weaviate
+        discussion = get_discussion(discussion_id, client)
+        if not discussion:
+            raise HTTPException(status_code=404, detail="Discussion not found")
+        
+        # Format response
+        return StartDiscussionResponse(
+            discussion_id=discussion.discussion_id,
+            user_id=discussion.user_id,
+            initial_question=discussion.initial_question,
+            cards_drawn=[card.model_dump() if hasattr(card, 'model_dump') else card.__dict__ for card in discussion.cards_drawn],
+            initial_response=discussion.initial_response,
+            created_at=discussion.created_at
+        )
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Failed to retrieve discussion: {e}")
+        raise HTTPException(status_code=500, detail="Failed to retrieve discussion")
+    finally:
+        if 'client' in locals():
+            client.close()
+
 @app.post("/discussion/{discussion_id}/followup")
 async def ask_followup_question(discussion_id: str, req: FollowupQuestionRequest):
     """Ask a followup question in an existing discussion."""

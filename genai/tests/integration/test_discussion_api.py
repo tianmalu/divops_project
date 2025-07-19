@@ -44,7 +44,7 @@ class TestDiscussionAPI(unittest.TestCase):
         followup_data = {
             "question": "Can you provide more details about the present situation card?"
         }
-        max_retries = 15
+        max_retries = 5
         for i in range(max_retries):
             response = requests.post(f"{BASE_URL}/discussion/{discussion_id}/followup", json=followup_data)
             if response.status_code == 200:
