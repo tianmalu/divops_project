@@ -13,3 +13,9 @@ variable "key_name" {
   default = "ec2"
   
 }
+
+variable "genai_key_name" {
+  description = "Key pair name in AWS"
+  default = "vockey"
+  
+}
