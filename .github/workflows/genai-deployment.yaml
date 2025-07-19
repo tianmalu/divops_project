@@ -196,7 +196,7 @@ jobs:
           run: |
             sudo apt-get update && sudo apt-get install -y ansible
             mkdir -p ~/.ssh
-            echo "${{ secrets.AWS_EC2_SSH_PRIVATE_KEY }}" > ~/.ssh/id_rsa
+            echo "${{ secrets.GENAI_AWS_EC2_SSH_PRIVATE_KEY }}" > ~/.ssh/id_rsa
             chmod 600 ~/.ssh/id_rsa
             ssh-keyscan -H ${{ steps.ec2-ip.outputs.ec2_ip }} >> ~/.ssh/known_hosts
             echo "[ec2]" > inventory.ini
