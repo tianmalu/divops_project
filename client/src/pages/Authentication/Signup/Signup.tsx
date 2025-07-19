@@ -1,6 +1,7 @@
 import {
 	Anchor,
 	Button,
+	Center,
 	Container,
 	Paper,
 	PasswordInput,
@@ -10,28 +11,56 @@ import {
 	Title,
 } from "@mantine/core";
 import { isEmail, isNotEmpty, useForm } from "@mantine/form";
+import { notifications } from "@mantine/notifications";
 import { useNavigate } from "react-router";
+import { useRegisterMutation } from "../../../api/users-api";
+
+interface RegisterForm {
+	firstName: string;
+	lastName: string;
+	email: string;
+	password: string;
+}
 
 const Signup = () => {
 	const navigate = useNavigate();
+	const registerMutation = useRegisterMutation();
 
-	const form = useForm({
+	const form = useForm<RegisterForm>({
 		mode: "uncontrolled",
 		initialValues: {
-			name: "",
+			firstName: "",
+			lastName: "",
 			email: "",
 			password: "",
 		},
 		validate: {
-			name: isNotEmpty("Name Required"),
+			firstName: isNotEmpty("First Name Required"),
+			lastName: isNotEmpty("Last Name Required"),
 			email: isEmail("Invalid email"),
 			password: isNotEmpty("Password Required"),
 		},
 	});
 
-	const signup = () => {
-		// TODO call backend
-		navigate("/login");
+	const signup = async (values: RegisterForm) => {
+		try {
+			const res = await registerMutation.mutateAsync({
+				body: {
+					firstName: values.firstName,
+					lastName: values.lastName,
+					email: values.email,
+					password: values.password,
+				},
+			});
+			console.log(res);
+			notifications.show({
+				title: "Account created successfully!",
+				message: "You can now Log in",
+			});
+			navigate("/login");
+		} catch {
+			// Nothing
+		}
 	};
 
 	return (
@@ -48,10 +77,19 @@ const Signup = () => {
 					<Stack gap="sm">
 						<TextInput
 							withAsterisk
-							label="Name"
-							placeholder="John Doe"
-							key={form.key("name")}
-							{...form.getInputProps("name")}
+							label="First Name"
+							placeholder="John"
+							key={form.key("firstName")}
+							{...form.getInputProps("firstName")}
+							disabled={registerMutation.isPending}
+						/>
+						<TextInput
+							withAsterisk
+							label="Last Name"
+							placeholder="Doe"
+							key={form.key("lastName")}
+							{...form.getInputProps("lastName")}
+							disabled={registerMutation.isPending}
 						/>
 						<TextInput
 							withAsterisk
@@ -59,6 +97,7 @@ const Signup = () => {
 							placeholder="your@email.com"
 							key={form.key("email")}
 							{...form.getInputProps("email")}
+							disabled={registerMutation.isPending}
 						/>
 						<PasswordInput
 							withAsterisk
@@ -66,8 +105,21 @@ const Signup = () => {
 							placeholder="Your password"
 							key={form.key("password")}
 							{...form.getInputProps("password")}
+							disabled={registerMutation.isPending}
 						/>
-						<Button type="submit" fullWidth mt="xl" radius="md">
+						{registerMutation.isError && !registerMutation.isPending && (
+							<Center>
+								<Text color="red">{registerMutation.error.message}</Text>
+							</Center>
+						)}
+						<Button
+							type="submit"
+							fullWidth
+							mt="xl"
+							radius="md"
+							disabled={registerMutation.isPending}
+							loading={registerMutation.isPending}
+						>
 							Sign Up
 						</Button>
 					</Stack>

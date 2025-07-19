@@ -5,6 +5,7 @@ import Signup from "./pages/Authentication/Signup/Signup";
 import Discussions from "./pages/User/Discussions/Discussions";
 import Feed from "./pages/User/Feed/Feed";
 import UserDashboard from "./pages/User/UserDashboard/UserDashboard";
+import "./api/clients";
 
 const App = () => {
 	const { setColorScheme } = useMantineColorScheme();
