@@ -7,7 +7,7 @@ spec:
   selector:
     app: team-divops-users-service
   ports:
-    - port: {{ .Values.users-service.service.port }}
-      targetPort: {{ .Values.users-service.service.targetPort }}
+    - port: {{ .Values.usersService.service.port }}
+      targetPort: {{ .Values.usersService.service.targetPort }}
       protocol: TCP
-  type: {{ .Values.users-service.service.type }}
+  type: {{ .Values.usersService.service.type }}

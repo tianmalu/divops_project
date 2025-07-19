@@ -4,7 +4,7 @@ metadata:
   name: team-divops-users-service 
   namespace: "users-service"
 spec:
-  replicas: {{ .Values.users-service.replicaCount }}
+  replicas: {{ .Values.usersService.replicaCount }}
   selector:
     matchLabels:
       app: team-divops-users-service
@@ -15,8 +15,8 @@ spec:
     spec:
       containers:
         - name: users-service
-          image: "{{ .Values.users-service.image.repository }}:{{ .Values.users-service.image.tag }}"
-          imagePullPolicy: {{ .Values.users-service.image.pullPolicy }}
+          image: "{{ .Values.usersService.image.repository }}:{{ .Values.usersService.image.tag }}"
+          imagePullPolicy: {{ .Values.usersService.image.pullPolicy }}
           resources:
             limits:
               cpu: "500m"
@@ -25,5 +25,5 @@ spec:
               cpu: "50m"
               memory: "50Mi"
           ports:
-            - containerPort: {{ .Values.users-service.service.targetPort }}
+            - containerPort: {{ .Values.usersService.service.targetPort }}
 

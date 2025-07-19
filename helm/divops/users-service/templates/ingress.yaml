@@ -26,5 +26,5 @@ spec:
               service:
                 name: team-divops-users-service
                 port:
-                  number: {{ .Values.users-service.service.port }}
+                  number: {{ .Values.usersService.service.port }}
 {{- end }}

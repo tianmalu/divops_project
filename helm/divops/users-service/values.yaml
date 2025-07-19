@@ -4,7 +4,7 @@ namespace:
 autoscaling:
   enabled: false
 
-users-service:
+usersService:
   image:
     repository: ghcr.io/aet-devops25/team-divops-users-service
     tag: latest
