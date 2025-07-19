@@ -175,6 +175,7 @@ jobs:
           env:
             AWS_ACCESS_KEY_ID: ${{ secrets.GENAI_AWS_ACCESS_KEY_ID }}
             AWS_SECRET_ACCESS_KEY: ${{ secrets.GENAI_AWS_SECRET_ACCESS_KEY }}
+            AWS_SESSION_TOKEN: ${{ secrets.GENAI_AWS_SESSION_TOKEN }}
             AWS_REGION: us-east-1
           run: terraform plan -out=tfplan
         - name: Terraform Apply
@@ -182,15 +183,19 @@ jobs:
           env:
             AWS_ACCESS_KEY_ID: ${{ secrets.GENAI_AWS_ACCESS_KEY_ID }}
             AWS_SECRET_ACCESS_KEY: ${{ secrets.GENAI_AWS_SECRET_ACCESS_KEY }}
+            AWS_SESSION_TOKEN: ${{ secrets.GENAI_AWS_SESSION_TOKEN }}
           run: terraform apply -auto-approve tfplan
-        - name: Output EC2 public IP
+        - name: Output EC2 public IPs
           working-directory: ./terraform
           id: ec2-ip
           run: |
-            EC2_IP=$(terraform output -raw ec2_public_ip)
-            echo "ec2_ip=$EC2_IP" >> $GITHUB_OUTPUT
-        - name: Show EC2 Public IP
-          run: echo "EC2 Public IP is ${{ steps.ec2-ip.outputs.ec2_ip }}"
+            REACT_IP=$(terraform output -raw react_app_public_ip)
+            GENAI_IP=$(terraform output -raw genai_app_public_ip)
+            echo "react_ip=$REACT_IP" >> $GITHUB_OUTPUT
+            echo "genai_ip=$GENAI_IP" >> $GITHUB_OUTPUT
+
+        - name: Show GENAI EC2 Public IP
+          run: echo "GENAI EC2 Public IP is ${{ steps.ec2-ip.outputs.genai_ip }}"
         - name: Setup Ansible and run playbook
           working-directory: ./ansible
           run: |
@@ -202,12 +207,12 @@ jobs:
             echo "${{ secrets.GENAI_AWS_EC2_SSH_PRIVATE_KEY }}" > ~/.ssh/id_rsa
             chmod 600 ~/.ssh/id_rsa
             
-            ssh-keyscan -H ${{ steps.ec2-ip.outputs.ec2_ip }} >> ~/.ssh/known_hosts
+            ssh-keyscan -H ${{ steps.ec2-ip.outputs.genai_ip }} >> ~/.ssh/known_hosts
             
             cat > inventory.ini << EOF
             [ec2]
-            ${{ steps.ec2-ip.outputs.ec2_ip }} ansible_user=ubuntu ansible_ssh_private_key_file=~/.ssh/id_rsa ansible_host_key_checking=false
-            
+            ${{ steps.ec2-ip.outputs.genai_ip }} ansible_user=ubuntu ansible_ssh_private_key_file=~/.ssh/id_rsa ansible_host_key_checking=false
+
             [ec2:vars]
             ansible_python_interpreter=/usr/bin/python3
             ansible_ssh_common_args='-o StrictHostKeyChecking=no'
