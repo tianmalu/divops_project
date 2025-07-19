@@ -12,7 +12,7 @@ usersService:
   service:
     type: ClusterIP
     port: 81
-    targetPort: 80
+    targetPort: 8080
   replicaCount: 1
   
 ingress:
