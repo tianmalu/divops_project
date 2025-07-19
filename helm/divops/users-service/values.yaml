@@ -1,0 +1,23 @@
+namespace:
+  create: false
+
+autoscaling:
+  enabled: false
+
+users-service:
+  image:
+    repository: ghcr.io/aet-devops25/team-divops-users-service
+    tag: latest
+    pullPolicy: Always
+  service:
+    type: ClusterIP
+    port: 81
+    targetPort: 80
+  replicaCount: 1
+  
+ingress:
+  enabled: true
+  className: "nginx"
+  tls: true
+  annotations:
+    cert-manager.io/cluster-issuer: "letsencrypt-prod"

@@ -1,0 +1,29 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: team-divops-users-service 
+  namespace: "users-service"
+spec:
+  replicas: {{ .Values.users-service.replicaCount }}
+  selector:
+    matchLabels:
+      app: team-divops-users-service
+  template:
+    metadata:
+      labels:
+        app: team-divops-users-service
+    spec:
+      containers:
+        - name: users-service
+          image: "{{ .Values.users-service.image.repository }}:{{ .Values.users-service.image.tag }}"
+          imagePullPolicy: {{ .Values.users-service.image.pullPolicy }}
+          resources:
+            limits:
+              cpu: "500m"
+              memory: "256Mi"
+            requests:
+              cpu: "50m"
+              memory: "50Mi"
+          ports:
+            - containerPort: {{ .Values.users-service.service.targetPort }}
+
