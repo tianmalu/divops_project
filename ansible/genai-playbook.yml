@@ -28,23 +28,27 @@
         state: present
         update_cache: yes
 
+    - name: Add user to docker group
+      user:
+        name: "{{ ansible_user }}"
+        groups: docker
+        append: yes
+      notify: reset_ssh
+
     - name: Ensure Docker service is running
       systemd:
         name: docker
         state: started
         enabled: true
 
-    - name: Pull GenAI Docker image
-      docker_image:
-        name: "{{ docker_image }}"
-        source: pull
-
-    - name: Stop existing container if running
-      docker_container:
-        name: "{{ container_name }}"
-        state: absent
-        force_kill: yes
-      ignore_errors: yes
+    # Create directory first before copying files
+    - name: Create application directory
+      file:
+        path: /genai/app
+        state: directory
+        mode: '0755'
+        owner: root
+        group: root
 
     - name: Create .env file on EC2
       copy:
@@ -53,7 +57,29 @@
           GEMINI_API_KEY={{ lookup('env', 'GEMINI_API_KEY') }}
           WEAVIATE_API_KEY={{ lookup('env', 'WEAVIATE_API_KEY') }}
           WEAVIATE_URL={{ lookup('env', 'WEAVIATE_URL') }}
-      become: true
+        mode: '0644'
+        owner: root
+        group: root
+
+    - name: Log in to GitHub Container Registry
+      docker_login:
+        registry_url: ghcr.io
+        username: "{{ lookup('env', 'GITHUB_USERNAME') }}"
+        password: "{{ lookup('env', 'GITHUB_TOKEN') }}"
+      when: lookup('env', 'GITHUB_USERNAME') != "" and lookup('env', 'GITHUB_TOKEN') != ""
+
+    - name: Pull GenAI Docker image
+      docker_image:
+        name: "{{ docker_image }}"
+        source: pull
+        force_source: yes
+
+    - name: Stop existing container if running
+      docker_container:
+        name: "{{ container_name }}"
+        state: absent
+        force_kill: yes
+      ignore_errors: yes
 
     - name: Run GenAI container
       docker_container:
@@ -64,3 +90,15 @@
         ports:
           - "8000:8000"
         env_file: /genai/app/.env
+        pull: true
+
+    - name: Wait for container to be healthy
+      wait_for:
+        port: 8000
+        host: localhost
+        delay: 10
+        timeout: 60
+
+  handlers:
+    - name: reset_ssh
+      meta: reset_connection
