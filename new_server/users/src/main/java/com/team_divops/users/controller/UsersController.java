@@ -77,7 +77,7 @@ public class UsersController {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(error);
         }
 
-        String token = JwtUtil.generateToken(user.getEmail());
+        String token = JwtUtil.generateToken(user.getEmail(), user.getId());
 
         LoginResponse response = new LoginResponse(
                 token
@@ -123,9 +123,23 @@ public class UsersController {
     @ApiResponse(responseCode = "400", description = "", content = @Content)
     @GetMapping("/profile")
     public ResponseEntity<?> getUserProfile(Authentication authentication) {
-        Long userId = Long.parseLong((String) authentication.getPrincipal());
-        System.out.println("userId " + userId);
-        Optional<User> optionalUser = usersRepository.findById(userId);
+        System.out.println("Authentication: " + authentication);
+        System.out.println("Principal: " + authentication.getPrincipal());
+        System.out.println("Authorities: " + authentication.getAuthorities());
+        
+        String principal = (String) authentication.getPrincipal();
+        Optional<User> optionalUser;
+        
+        // Try to parse as userId first (new tokens)
+        try {
+            Long userId = Long.parseLong(principal);
+            System.out.println("userId " + userId);
+            optionalUser = usersRepository.findById(userId);
+        } catch (NumberFormatException e) {
+            // Fallback: treat as email (old tokens)
+            System.out.println("Treating principal as email: " + principal);
+            optionalUser = usersRepository.findByEmail(principal);
+        }
 
         if (optionalUser.isEmpty()) {
             ErrorResponse error = new ErrorResponse("Id not found");

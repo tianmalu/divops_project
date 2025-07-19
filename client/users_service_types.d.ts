@@ -99,9 +99,12 @@ export interface components {
             token: string;
         };
         UserResponse: {
-            firstName?: string;
-            lastName?: string;
-            email?: string;
+            /** @description User First Name */
+            firstName: string;
+            /** @description User Last Name */
+            lastName: string;
+            /** @description User Email */
+            email: string;
         };
     };
     responses: never;

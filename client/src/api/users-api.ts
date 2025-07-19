@@ -10,7 +10,10 @@ export const UsersQueryKeys = {
 export function useGetUserProfile() {
 	return useQuery({
 		queryKey: [UsersQueryKeys.GET_USER_PROFILE],
-		queryFn: () => usersClient.GET("/api/users/profile"),
+		queryFn: async () => {
+			const res = await usersClient.GET("/api/users/profile");
+			return res.data;
+		},
 	});
 }
 
