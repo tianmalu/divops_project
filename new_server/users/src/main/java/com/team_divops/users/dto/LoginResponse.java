@@ -1,31 +1,18 @@
 package com.team_divops.users.dto;
 
-public class LoginResponse {
-    private String token;
-    private String firstName;
-    private String lastName;
-    private String email;
+import io.swagger.v3.oas.annotations.media.Schema;
+import jakarta.validation.constraints.NotBlank;
 
-    public LoginResponse(String token, String firstName, String lastName, String email) {
+public class LoginResponse {
+    @NotBlank(message = "Token is required")
+    @Schema(description = "User Token", nullable = false)
+    private String token;
+
+    public LoginResponse(String token) {
         this.token = token;
-        this.firstName = firstName;
-        this.lastName = lastName;
-        this.email = email;
     }
 
     public String getToken() {
         return token;
-    }
-
-    public String getFirstName() {
-        return firstName;
-    }
-
-    public String getLastName() {
-        return lastName;
-    }
-
-    public String getEmail() {
-        return email;
     }
 }

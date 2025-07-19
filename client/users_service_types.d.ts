@@ -30,8 +30,25 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** Login a user and return JWT token with user details */
+        /** Login a user and return JWT token */
         post: operations["loginUser"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/users/profile": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get user profile */
+        get: operations["getUserProfile"];
+        put?: never;
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -65,9 +82,6 @@ export interface components {
             email: string;
             password: string;
         };
-        SuccessResponse: {
-            message?: string;
-        };
         LoginRequest: {
             /**
              * @description User email
@@ -81,7 +95,10 @@ export interface components {
             password: string;
         };
         LoginResponse: {
-            token?: string;
+            /** @description User Token */
+            token: string;
+        };
+        UserResponse: {
             firstName?: string;
             lastName?: string;
             email?: string;
@@ -114,10 +131,10 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "*/*": components["schemas"]["SuccessResponse"];
+                    "*/*": Record<string, never>;
                 };
             };
-            /** @description Email is already registered */
+            /** @description Bad Request */
             400: {
                 headers: {
                     [name: string]: unknown;
@@ -148,14 +165,39 @@ export interface operations {
                     "*/*": components["schemas"]["LoginResponse"];
                 };
             };
-            /** @description Invalid email or password */
-            401: {
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    getUserProfile: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successfully fetched user */
+            200: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "text/plain": unknown;
+                    "*/*": components["schemas"]["UserResponse"];
                 };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
         };
     };

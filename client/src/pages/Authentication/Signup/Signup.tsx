@@ -44,7 +44,7 @@ const Signup = () => {
 
 	const signup = async (values: RegisterForm) => {
 		try {
-			const res = await registerMutation.mutateAsync({
+			await registerMutation.mutateAsync({
 				body: {
 					firstName: values.firstName,
 					lastName: values.lastName,
@@ -52,10 +52,11 @@ const Signup = () => {
 					password: values.password,
 				},
 			});
-			console.log(res);
+
 			notifications.show({
 				title: "Account created successfully!",
 				message: "You can now Log in",
+				position: "top-right",
 			});
 			navigate("/login");
 		} catch {
@@ -70,7 +71,7 @@ const Signup = () => {
 					<Title ta="center">Hello!</Title>
 
 					<Text ta="center">
-						Already have an account? <Anchor href="signup">Login</Anchor>
+						Already have an account? <Anchor href="login">Login</Anchor>
 					</Text>
 				</Stack>
 				<Paper withBorder shadow="sm" p={22} mt={30} radius="md">

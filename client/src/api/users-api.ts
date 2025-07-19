@@ -1,19 +1,27 @@
-import { useMutation } from "@tanstack/react-query";
+import { useMutation, useQuery } from "@tanstack/react-query";
 import { usersClient, type usersSchema } from "./clients";
 
 export const UsersQueryKeys = {
+	GET_USER_PROFILE: "GET_USER_PROFILE",
 	LOGIN: "LOGIN",
 	REGISTER: "REGISTER",
 };
+
+export function useGetUserProfile() {
+	return useQuery({
+		queryKey: [UsersQueryKeys.GET_USER_PROFILE],
+		queryFn: () => usersClient.GET("/api/users/profile"),
+	});
+}
 
 interface UseLoginMutationProps {
 	body: usersSchema["/api/users/login"]["post"]["requestBody"]["content"]["application/json"];
 }
 
-export function useLoginMutation({ body }: UseLoginMutationProps) {
+export function useLoginMutation() {
 	return useMutation({
 		mutationKey: [UsersQueryKeys.LOGIN],
-		mutationFn: () =>
+		mutationFn: ({ body }: UseLoginMutationProps) =>
 			usersClient.POST("/api/users/login", {
 				body,
 			}),

@@ -1,8 +1,8 @@
 import {
 	Anchor,
 	Button,
+	Center,
 	Container,
-	Group,
 	Paper,
 	PasswordInput,
 	Stack,
@@ -12,10 +12,17 @@ import {
 } from "@mantine/core";
 import { isEmail, useForm } from "@mantine/form";
 import { useNavigate } from "react-router";
+import { useLoginMutation } from "../../../api/users-api";
+
+interface LoginFormProps {
+	email: string;
+	password: string;
+}
 
 const Login = () => {
 	const navigate = useNavigate();
-	const form = useForm({
+	const loginMutation = useLoginMutation();
+	const form = useForm<LoginFormProps>({
 		mode: "uncontrolled",
 		initialValues: {
 			email: "",
@@ -26,10 +33,19 @@ const Login = () => {
 			password: (value) => (value ? null : "Password Required"),
 		},
 	});
-	console.log(form.errors);
-	const login = () => {
-		// TODO call backend
-		navigate("/main");
+
+	const login = async (values: LoginFormProps) => {
+		try {
+			const res = await loginMutation.mutateAsync({
+				body: values,
+			});
+			if (res.data) {
+				localStorage.setItem("token", res.data.token);
+				navigate("/main");
+			}
+		} catch {
+			// Nothing
+		}
 	};
 
 	return (
@@ -60,11 +76,11 @@ const Login = () => {
 							key={form.key("password")}
 							{...form.getInputProps("password")}
 						/>
-						<Group justify="space-between" mt="lg">
-							<Anchor component="button" size="sm">
-								Forgot password?
-							</Anchor>
-						</Group>
+						{loginMutation.isError && !loginMutation.isPending && (
+							<Center>
+								<Text color="red">{loginMutation.error.message}</Text>
+							</Center>
+						)}
 						<Button type="submit" fullWidth mt="xl" radius="md">
 							Sign in
 						</Button>

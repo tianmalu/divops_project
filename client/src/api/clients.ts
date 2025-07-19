@@ -2,15 +2,31 @@ import createClient, { type Middleware } from "openapi-fetch";
 import type { paths as usersServicePaths } from "../../users_service_types";
 
 const myMiddleware: Middleware = {
-	//   async onRequest({ request, options }) {
-	//     // set "foo" header
-	//     request.headers.set("foo", "bar");
-	//     return request;
-	//   },
+	async onRequest({ request }) {
+		const token = localStorage.getItem("token");
+		if (token) {
+			request.headers.set("Authorization", `Bearer ${token}`);
+			return request;
+		}
+		return undefined;
+	},
 	async onResponse({ response }) {
 		if (!response.ok) {
-			const text = await response.text();
-			throw new Error(text);
+			let message = `Request failed with status ${response.status}`;
+
+			try {
+				const text = await response.text();
+				if (text) {
+					const errorData = JSON.parse(text);
+					if (errorData.message) {
+						message = errorData.message;
+					}
+				}
+			} catch {
+				// Ignore parsing errors
+			}
+
+			throw new Error(message);
 		}
 		return undefined;
 	},

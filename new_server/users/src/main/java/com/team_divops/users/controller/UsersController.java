@@ -4,6 +4,8 @@ import com.team_divops.users.dto.UserRegistrationRequest;
 import com.team_divops.users.dto.LoginRequest;
 import com.team_divops.users.dto.LoginResponse;
 import com.team_divops.users.dto.SuccessResponse;
+import com.team_divops.users.dto.ErrorResponse;
+import com.team_divops.users.dto.UserResponse;
 import com.team_divops.users.model.User;
 import com.team_divops.users.repository.UsersRepository;
 import org.springframework.http.ResponseEntity;
@@ -11,6 +13,7 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.server.ResponseStatusException;
 import org.springframework.http.HttpStatus;
+import org.springframework.security.core.Authentication;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.Schema;
@@ -35,11 +38,12 @@ public class UsersController {
 
         @Operation(summary = "Register a new user")
         @ApiResponse(responseCode = "200", description = "User registered successfully")
-        @ApiResponse(responseCode = "400", description = "Email is already registered", content = @Content)
+        @ApiResponse(responseCode = "400", description = "", content = @Content)
         @PostMapping("/register")
-        public ResponseEntity<SuccessResponse> registerUser(@Valid @RequestBody UserRegistrationRequest request) {
+        public ResponseEntity<?> registerUser(@Valid @RequestBody UserRegistrationRequest request) {
             if (usersRepository.findByEmail(request.getEmail()).isPresent()) {
-                throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Email is already registered");
+                ErrorResponse error = new ErrorResponse("Email is already registered");
+                return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(error);
             }
 
             User user = new User();
@@ -52,38 +56,91 @@ public class UsersController {
             return ResponseEntity.ok(new SuccessResponse("User registered successfully"));
         }
 
-    @Operation(summary = "Login a user and return JWT token with user details")
+    @Operation(summary = "Login a user and return JWT token")
     @ApiResponse(responseCode = "200", description = "Successful login",
         content = @Content(schema = @Schema(implementation = LoginResponse.class))
     )
-    @ApiResponse(responseCode = "401", description = "Invalid email or password",
-        content = @Content(mediaType = "text/plain")
-    )
+    @ApiResponse(responseCode = "400", description = "", content = @Content)
     @PostMapping("/login")
     public ResponseEntity<?> loginUser(@Valid @RequestBody LoginRequest request) {
         Optional<User> optionalUser = usersRepository.findByEmail(request.getEmail());
 
         if (optionalUser.isEmpty()) {
-            return ResponseEntity.status(401).body("Email not found");
+            ErrorResponse error = new ErrorResponse("Email not found");
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(error);
         }
 
         User user = optionalUser.get();
 
         if (!passwordEncoder.matches(request.getPassword(), user.getPassword())) {
-            return ResponseEntity.status(401).body("Invalid password");
+            ErrorResponse error = new ErrorResponse("Invalid password");
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(error);
         }
 
         String token = JwtUtil.generateToken(user.getEmail());
 
         LoginResponse response = new LoginResponse(
-                token,
-                user.getFirstName(),
-                user.getLastName(),
-                user.getEmail()
+                token
         );
 
         return ResponseEntity.ok(response);
     }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+    @Operation(summary = "Get user profile")
+    @ApiResponse(responseCode = "200", description = "Successfully fetched user",
+        content = @Content(schema = @Schema(implementation = UserResponse.class))
+    )
+    @ApiResponse(responseCode = "400", description = "", content = @Content)
+    @GetMapping("/profile")
+    public ResponseEntity<?> getUserProfile(Authentication authentication) {
+        Long userId = Long.parseLong((String) authentication.getPrincipal());
+        System.out.println("userId " + userId);
+        Optional<User> optionalUser = usersRepository.findById(userId);
+
+        if (optionalUser.isEmpty()) {
+            ErrorResponse error = new ErrorResponse("Id not found");
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(error);
+        }
+
+        User user = optionalUser.get();
+
+        UserResponse response = new UserResponse(
+            user.getFirstName(), user.getLastName(), user.getEmail()
+        );
+
+        return ResponseEntity.ok(response);
+    }
+
 
     @Operation(summary = "Test serivce is working endpoint")
     @GetMapping("/hello")
