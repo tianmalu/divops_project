@@ -189,8 +189,8 @@ jobs:
           working-directory: ./terraform
           id: ec2-ip
           run: |
-            REACT_IP=$(terraform output -raw react_app_public_ip)
-            GENAI_IP=$(terraform output -raw genai_app_public_ip)
+            REACT_IP=$(terraform output -raw public_ip)
+            GENAI_IP=$(terraform output -raw genai_public_ip)
             echo "react_ip=$REACT_IP" >> $GITHUB_OUTPUT
             echo "genai_ip=$GENAI_IP" >> $GITHUB_OUTPUT
 
