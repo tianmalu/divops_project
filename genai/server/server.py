@@ -7,6 +7,7 @@ import uuid
 from contextlib import asynccontextmanager
 from datetime import datetime
 from typing import Optional
+import asyncio
 
 # Third-party imports
 import uvicorn
@@ -139,13 +140,11 @@ async def daily_reading(
 
 @app.post("/genai/discussion/start")
 async def start_new_discussion(req: StartDiscussionRequest):
-    """Start a new discussion with initial question and draw tarot cards."""
     try:
         logger.info(f"Starting new discussion for user {req.user_id}: {req.initial_question}")
-
         client = get_weaviate_client()
         
-        # Start discussion using the imported function
+        # Start discussion
         discussion = start_discussion(
             user_id=req.user_id,
             discussion_id=req.discussion_id,
@@ -153,29 +152,33 @@ async def start_new_discussion(req: StartDiscussionRequest):
             client=client
         )
         
-        # Format cards for response (CardLayout对象)
-        cards_for_display = []
-        for card in discussion.cards_drawn:
-            cards_for_display.append({
-                "name": card.name,
-                "upright": card.upright,
-                "position": card.position,
-                "meaning": card.meaning,
-                "position_keywords": card.position_keywords
-            })
-        # Create structured response
-        response = StartDiscussionResponse(
+        # IMPORTANT: Verify the discussion was actually stored and is retrievable
+        max_retries = 3
+        for attempt in range(max_retries):
+            try:
+                # Try to retrieve the discussion we just created
+                stored_discussion = get_discussion(discussion.discussion_id, client)
+                if stored_discussion:
+                    logger.info(f"Discussion {discussion.discussion_id} successfully verified in storage")
+                    break
+                else:
+                    logger.warning(f"Discussion {discussion.discussion_id} not yet available, attempt {attempt + 1}")
+                    await asyncio.sleep(1)  # Wait 1 second before retry
+            except Exception as e:
+                logger.warning(f"Verification attempt {attempt + 1} failed: {e}")
+                if attempt == max_retries - 1:
+                    raise HTTPException(status_code=500, detail="Discussion created but not immediately available")
+                await asyncio.sleep(1)
+        
+        # Format response and return
+        return StartDiscussionResponse(
             discussion_id=discussion.discussion_id,
             user_id=discussion.user_id,
             initial_question=discussion.initial_question,
+            cards_drawn=[card.model_dump() if hasattr(card, 'model_dump') else card.__dict__ for card in discussion.cards_drawn],
             initial_response=discussion.initial_response,
-            cards_drawn=cards_for_display,
             created_at=discussion.created_at
         )
-        
-        logger.info(f"Successfully started discussion: {discussion.discussion_id}")
-        return response
-        
     except Exception as e:
         logger.error(f"Failed to start discussion: {e}")
         raise HTTPException(status_code=500, detail="Failed to start discussion")

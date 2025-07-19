@@ -27,6 +27,7 @@ class TestDiscussionAPI(unittest.TestCase):
         response = requests.post(f"{BASE_URL}/discussion/start", json=start_discussion_data)
         self.assertEqual(response.status_code, 200, f"Failed to start discussion: {response.text}")
         discussion_data = response.json()
+        print("Status:", response.status_code, "Text:", response.text)
         discussion_id = discussion_data["discussion_id"]
         self.assertEqual(discussion_data["initial_question"], start_discussion_data["initial_question"])
         self.assertTrue(len(discussion_data["cards_drawn"]) > 0)
@@ -39,14 +40,19 @@ class TestDiscussionAPI(unittest.TestCase):
         self.assertIn("meaning", card)
         self.assertIn("position_keywords", card)
 
-        time.sleep(3) 
-
         # Followup question
+        # Wait for discussion to be available for followup (retry up to 5 times)
         followup_data = {
             "question": "Can you provide more details about the present situation card?"
         }
-        response = requests.post(f"{BASE_URL}/discussion/{discussion_id}/followup", json=followup_data)
-        self.assertEqual(response.status_code, 200, f"Followup failed: {response.text}")
+        max_retries = 15
+        for i in range(max_retries):
+            response = requests.post(f"{BASE_URL}/discussion/{discussion_id}/followup", json=followup_data)
+            if response.status_code == 200:
+                break
+            time.sleep(2)
+        else:
+            self.fail(f"Followup failed after {max_retries} retries: {response.text}")
         followup_response = response.json()
         self.assertEqual(followup_response["question"], followup_data["question"])
         self.assertTrue(len(followup_response["response"]) > 0)
