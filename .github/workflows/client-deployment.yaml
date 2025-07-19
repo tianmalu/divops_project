@@ -7,7 +7,7 @@ on:
 env:
   KUBE_NAMESPACE: client-app
   RELEASE_NAME: team-divops-client
-  HELM_CHART_PATH: ./helm/divops
+  HELM_CHART_PATH: ./helm/divops/client
   IMAGE_REPOSITORY: ghcr.io/aet-devops25/team-divops-client
   AWS_REGION: us-east-1
 

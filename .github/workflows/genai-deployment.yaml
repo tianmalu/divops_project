@@ -1,0 +1,235 @@
+name: Pipeline For GenAI Deployment
+
+on:
+  push:
+    branches: [main]
+
+env:
+  KUBE_NAMESPACE: genai-app
+  RELEASE_NAME: team-divops-genai
+  HELM_CHART_PATH: ./helm/divops/genai
+  IMAGE_REPOSITORY: ghcr.io/aet-devops25/team-divops-genai
+  AWS_REGION: us-east-1
+
+jobs:
+
+  linting:
+    name: Code Linting
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+  testing:
+    name: Testing
+    runs-on: ubuntu-latest
+    needs: linting
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: 3.13.5
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+        working-directory: ./genai
+      - name: Create .env file
+        run: |
+          echo "GEMINI_API_KEY=${{ secrets.GEMINI_API_KEY }}" > ./genai/app/.env
+          echo "WEAVIATE_API_KEY=${{ secrets.WEAVIATE_API_KEY }}" >> ./genai/app/.env
+          echo "WEAVIATE_URL=${{ secrets.WEAVIATE_URL }}" >> ./genai/app/.env
+        working-directory: .
+      - name: Run FastAPI in background
+        run: |
+          pip install uvicorn
+          uvicorn server.server:app --host 0.0.0.0 --port 8000 &
+        working-directory: ./genai
+
+      - name: Wait for server to be ready
+        run: |
+          for i in {1..10}; do
+            curl -s http://localhost:8000/genai/health && exit 0
+            sleep 1
+          done
+          echo "Server failed to start" && exit 1
+
+      - name: Run all tests
+        run: python test_all_systems.py
+        working-directory: ./genai/tests
+
+  build-and-push-genai-app:
+    name: Build and Push GenAI Docker Image
+    runs-on: ubuntu-latest
+    needs: testing
+    permissions:
+      contents: read
+      packages: write
+    outputs:
+      image_tag: ${{ steps.set-tag.outputs.image_tag }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Set IMAGE_TAG to short SHA
+        id: set-tag
+        run: echo "IMAGE_TAG=$(echo $GITHUB_SHA | cut -c1-7)" >> $GITHUB_OUTPUT
+      - name: Create .env file
+        run: |
+          echo "GEMINI_API_KEY=${{ secrets.GEMINI_API_KEY }}" > ./genai/app/.env
+          echo "WEAVIATE_API_KEY=${{ secrets.WEAVIATE_API_KEY }}" >> ./genai/app/.env
+          echo "WEAVIATE_URL=${{ secrets.WEAVIATE_URL }}" >> ./genai/app/.env
+        working-directory: .
+      - name: Build genai Docker image with both tags
+        run: docker build -f ./genai/Dockerfile -t ${{ env.IMAGE_REPOSITORY }}:latest -t ${{ env.IMAGE_REPOSITORY }}:${{ steps.set-tag.outputs.image_tag }} ./genai
+      - name: Push latest tag
+        run: docker push ${{ env.IMAGE_REPOSITORY }}:latest
+      - name: Push SHA tag
+        run: docker push ${{ env.IMAGE_REPOSITORY }}:${{ steps.set-tag.outputs.image_tag }}
+
+  deploy-helm:
+    name: Deploy Helm Chart
+    runs-on: ubuntu-latest
+    needs: build-and-push-genai-app
+    env:
+      IMAGE_TAG: ${{ needs.build-and-push-genai-app.outputs.IMAGE_TAG }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up kubectl
+        uses: azure/setup-kubectl@v3
+        with:
+          version: 'latest'
+
+      - name: Set up Helm
+        uses: azure/setup-helm@v3
+        with:
+          version: 'latest'
+
+      - name: Create .kube directory
+        run: mkdir -p $HOME/.kube
+
+      - name: Configure kubeconfig
+        run: echo "${{ secrets.GENAI_KUBECONFIG }}" > $HOME/.kube/config
+
+      - name: Cleanup old Helm secrets and configmaps (if any)
+        run: |
+          echo "Deleting old Helm secrets in namespace $KUBE_NAMESPACE"
+          kubectl delete secret -n $KUBE_NAMESPACE -l owner=helm || true
+          echo "Deleting old Helm configmaps in namespace $KUBE_NAMESPACE"
+          kubectl delete configmap -n $KUBE_NAMESPACE -l owner=helm || true
+
+      - name: Deploy Helm Chart with SHA tag
+        run: |
+          helm upgrade --install $RELEASE_NAME $HELM_CHART_PATH \
+            --namespace $KUBE_NAMESPACE \
+            --set genai.image.repository=$IMAGE_REPOSITORY \
+            --set genai.image.tag=$IMAGE_TAG \
+            --force --wait \
+            --history-max 1
+
+
+
+
+  deploy-aws:
+      name: Deploy To AWS EC2
+      needs: build-and-push-genai-app
+      runs-on: ubuntu-latest
+      if: ${{ vars.RUN_AWS_DEPLOYMENT == 'true' }}
+      env:
+        AWS_ACCESS_KEY_ID: ${{ secrets.GENAI_AWS_ACCESS_KEY_ID }}
+        AWS_SECRET_ACCESS_KEY: ${{ secrets.GENAI_AWS_SECRET_ACCESS_KEY }}
+        AWS_SESSION_TOKEN: ${{ secrets.GENAI_AWS_SESSION_TOKEN }}
+        AWS_REGION: us-east-1
+        TF_LOG: ""
+      steps:
+        - name: Checkout repo
+          uses: actions/checkout@v4
+        - name: Cache Terraform files
+          uses: actions/cache@v3
+          with:
+            path: |
+              ./terraform/terraform.tfstate
+              ./terraform/terraform.tfstate.backup
+              ./terraform/.terraform
+            key: terraform-state-${{ hashFiles('terraform/**/*.tf') }}
+            restore-keys: terraform-state-
+        - name: Setup Terraform
+          uses: hashicorp/setup-terraform@v2
+          with:
+            terraform_version: 1.5.6
+            terraform_wrapper: false
+        - name: Terraform Init
+          working-directory: ./terraform
+          run: terraform init
+        - name: Terraform Validate
+          working-directory: ./terraform
+          run: terraform validate
+        - name: Terraform Plan
+          working-directory: ./terraform
+          env:
+            AWS_ACCESS_KEY_ID: ${{ secrets.GENAI_AWS_ACCESS_KEY_ID }}
+            AWS_SECRET_ACCESS_KEY: ${{ secrets.GENAI_AWS_SECRET_ACCESS_KEY }}
+            AWS_SESSION_TOKEN: ${{ secrets.GENAI_AWS_SESSION_TOKEN }}
+            AWS_REGION: us-east-1
+          run: terraform plan -out=tfplan
+        - name: Terraform Apply
+          working-directory: ./terraform
+          env:
+            AWS_ACCESS_KEY_ID: ${{ secrets.GENAI_AWS_ACCESS_KEY_ID }}
+            AWS_SECRET_ACCESS_KEY: ${{ secrets.GENAI_AWS_SECRET_ACCESS_KEY }}
+            AWS_SESSION_TOKEN: ${{ secrets.GENAI_AWS_SESSION_TOKEN }}
+          run: terraform apply -auto-approve tfplan
+        - name: Output EC2 public IPs
+          working-directory: ./terraform
+          id: ec2-ip
+          run: |
+            REACT_IP=$(terraform output -raw public_ip)
+            GENAI_IP=$(terraform output -raw genai_public_ip)
+            echo "react_ip=$REACT_IP" >> $GITHUB_OUTPUT
+            echo "genai_ip=$GENAI_IP" >> $GITHUB_OUTPUT
+
+        - name: Show GENAI EC2 Public IP
+          run: echo "GENAI EC2 Public IP is ${{ steps.ec2-ip.outputs.genai_ip }}"
+        - name: Setup Ansible and run playbook
+          working-directory: ./ansible
+          run: |
+            sudo apt-get update && sudo apt-get install -y ansible
+            echo "✅ Ansible installed successfully"
+            ansible --version
+            exit 0
+            
+            mkdir -p ~/.ssh
+            echo "${{ secrets.GENAI_AWS_EC2_SSH_PRIVATE_KEY }}" > ~/.ssh/id_rsa
+            chmod 600 ~/.ssh/id_rsa
+            
+            ssh-keyscan -H ${{ steps.ec2-ip.outputs.genai_ip }} >> ~/.ssh/known_hosts
+            
+            cat > inventory.ini << EOF
+            [ec2]
+            ${{ steps.ec2-ip.outputs.genai_ip }} ansible_user=ubuntu ansible_ssh_private_key_file=~/.ssh/id_rsa ansible_host_key_checking=false
+
+            [ec2:vars]
+            ansible_python_interpreter=/usr/bin/python3
+            ansible_ssh_common_args='-o StrictHostKeyChecking=no'
+            EOF
+            
+            echo "📝 Generated inventory.ini:"
+            cat inventory.ini
+            
+            echo "🔗 Testing connection..."
+            ansible ec2 -m ping -i inventory.ini
+            
+            echo "🚀 Running Ansible playbook..."
+            ansible-playbook -i inventory.ini genai-playbook.yml -v
+          env:
+            GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+            WEAVIATE_API_KEY: ${{ secrets.WEAVIATE_API_KEY }}
+            WEAVIATE_URL: ${{ secrets.WEAVIATE_URL }}
+            GITHUB_USERNAME: ${{ github.actor }}
+            GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

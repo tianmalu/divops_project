@@ -1,0 +1,22 @@
+namespace:
+  create: false
+
+autoscaling:
+  enabled: false
+
+genai:
+  image:
+    repository: ghcr.io/aet-devops25/team-divops-genai
+    tag: latest
+    pullPolicy: Always
+  service:
+    type: ClusterIP
+    port: 8000
+    targetPort: 8000
+  replicaCount: 1
+
+ingress:
+  enabled: true
+  host: team-divops-devops25.student.k8s.aet.cit.tum.de
+  path: /genai
+  tls: true

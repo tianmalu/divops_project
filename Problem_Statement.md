@@ -34,7 +34,6 @@ Many users seek guidance or emotional insight through tarot readings, but tradit
 - **LLM for Response Generation**: Generate human-like, emotionally resonant tarot interpretations.
 - **Embedding + Vector DB**: Use semantic search to match questions with relevant tarot symbols.
 - **Feedback Loop**: Use user thumbs-up/down or comment feedback to update keywords in vector DB for more accurate future matches.
-- **Optional Image Gen**: GenAI can create unique visuals based on the reading to enhance user immersion.
 
 ---
 
@@ -49,8 +48,8 @@ Many users seek guidance or emotional insight through tarot readings, but tradit
 - **App**: Draw 3 cards, explains with AI-generated empathy: "Your heart seeks clarity, but the signs hint toward imbalance..."
 
 #### 📈 Scenario 3: Data-Driven Learning
-- **User**: Gives feedback: "This reading didn’t feel accurate."
-- **App**: Logs vector embedding and updates keyword weighting for future refinement.
+- **User**: Rates the reading from 0 to 5 stars (e.g., 0 = not accurate, 5 = very accurate).
+- **App**: If the user gives a rating of 4 or 5, the feedback and context are logged and added to the RAG system to enhance future retrieval and improve answer relevance for similar questions.
 
 
 ---
