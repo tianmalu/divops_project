@@ -117,82 +117,82 @@ jobs:
       - name: Deploy Helm Chart with SHA tag
         run: helm upgrade --install $RELEASE_NAME $HELM_CHART_PATH --namespace $KUBE_NAMESPACE --set client.image.repository=$IMAGE_REPOSITORY --set client.image.tag=$IMAGE_TAG --force --wait
 
-  deploy-aws:
-    name: Deploy To AWS EC2
-    needs: build-and-push-client-app
-    runs-on: ubuntu-latest
-    if: ${{ vars.RUN_AWS_DEPLOYMENT == 'true' }}
-    env:
-      AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
-      AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-      AWS_SESSION_TOKEN: ${{ secrets.AWS_SESSION_TOKEN }}
-      AWS_REGION: us-east-1
-      TF_LOG: ""
-    steps:
-      - name: Checkout repo
-        uses: actions/checkout@v4
+  # deploy-aws:
+  #   name: Deploy To AWS EC2
+  #   needs: build-and-push-client-app
+  #   runs-on: ubuntu-latest
+  #   if: ${{ vars.RUN_AWS_DEPLOYMENT == 'true' }}
+  #   env:
+  #     AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+  #     AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+  #     AWS_SESSION_TOKEN: ${{ secrets.AWS_SESSION_TOKEN }}
+  #     AWS_REGION: us-east-1
+  #     TF_LOG: ""
+  #   steps:
+  #     - name: Checkout repo
+  #       uses: actions/checkout@v4
 
-      - name: Cache Terraform files
-        uses: actions/cache@v3
-        with:
-          path: |
-            ./terraform/terraform.tfstate
-            ./terraform/terraform.tfstate.backup
-            ./terraform/.terraform
-          key: terraform-state-${{ hashFiles('terraform/**/*.tf') }}
-          restore-keys: terraform-state-
+  #     - name: Cache Terraform files
+  #       uses: actions/cache@v3
+  #       with:
+  #         path: |
+  #           ./terraform/terraform.tfstate
+  #           ./terraform/terraform.tfstate.backup
+  #           ./terraform/.terraform
+  #         key: terraform-state-${{ hashFiles('terraform/**/*.tf') }}
+  #         restore-keys: terraform-state-
 
-      - name: Setup Terraform
-        uses: hashicorp/setup-terraform@v2
-        with:
-          terraform_version: 1.5.6
-          terraform_wrapper: false
+  #     - name: Setup Terraform
+  #       uses: hashicorp/setup-terraform@v2
+  #       with:
+  #         terraform_version: 1.5.6
+  #         terraform_wrapper: false
 
-      - name: Terraform Init
-        working-directory: ./terraform
-        run: terraform init
+  #     - name: Terraform Init
+  #       working-directory: ./terraform
+  #       run: terraform init
 
-      - name: Terraform Validate
-        working-directory: ./terraform
-        run: terraform validate
+  #     - name: Terraform Validate
+  #       working-directory: ./terraform
+  #       run: terraform validate
 
-      - name: Terraform Plan
-        working-directory: ./terraform
-        env:
-          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          AWS_REGION: us-east-1
-        run: terraform plan -out=tfplan
+  #     - name: Terraform Plan
+  #       working-directory: ./terraform
+  #       env:
+  #         AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+  #         AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+  #         AWS_REGION: us-east-1
+  #       run: terraform plan -out=tfplan
 
-      - name: Terraform Apply
-        working-directory: ./terraform
-        env:
-          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-        run: terraform apply -auto-approve tfplan
+  #     - name: Terraform Apply
+  #       working-directory: ./terraform
+  #       env:
+  #         AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+  #         AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+  #       run: terraform apply -auto-approve tfplan
 
-      - name: Output EC2 public IP
-        working-directory: ./terraform
-        id: ec2-ip
-        run: |
-          EC2_IP=$(terraform output -raw ec2_public_ip)
-          echo "ec2_ip=$EC2_IP" >> $GITHUB_OUTPUT
+  #     - name: Output EC2 public IP
+  #       working-directory: ./terraform
+  #       id: ec2-ip
+  #       run: |
+  #         EC2_IP=$(terraform output -raw ec2_public_ip)
+  #         echo "ec2_ip=$EC2_IP" >> $GITHUB_OUTPUT
 
-      - name: Show EC2 Public IP
-        run: echo "EC2 Public IP is ${{ steps.ec2-ip.outputs.ec2_ip }}"
+  #     - name: Show EC2 Public IP
+  #       run: echo "EC2 Public IP is ${{ steps.ec2-ip.outputs.ec2_ip }}"
       
-      - name: Setup Ansible and run playbook
-        working-directory: ./ansible
-        run: |
-          sudo apt-get update && sudo apt-get install -y ansible
+  #     - name: Setup Ansible and run playbook
+  #       working-directory: ./ansible
+  #       run: |
+  #         sudo apt-get update && sudo apt-get install -y ansible
 
-          mkdir -p ~/.ssh
-          echo "${{ secrets.AWS_EC2_SSH_PRIVATE_KEY }}" > ~/.ssh/id_rsa
-          chmod 600 ~/.ssh/id_rsa
+  #         mkdir -p ~/.ssh
+  #         echo "${{ secrets.AWS_EC2_SSH_PRIVATE_KEY }}" > ~/.ssh/id_rsa
+  #         chmod 600 ~/.ssh/id_rsa
 
-          ssh-keyscan -H ${{ steps.ec2-ip.outputs.ec2_ip }} >> ~/.ssh/known_hosts
+  #         ssh-keyscan -H ${{ steps.ec2-ip.outputs.ec2_ip }} >> ~/.ssh/known_hosts
 
-          echo "[ec2]" > inventory.ini
-          echo "${{ steps.ec2-ip.outputs.ec2_ip }}" >> inventory.ini
+  #         echo "[ec2]" > inventory.ini
+  #         echo "${{ steps.ec2-ip.outputs.ec2_ip }}" >> inventory.ini
 
-          ansible-playbook -i inventory.ini playbook.yml --private-key ~/.ssh/id_rsa -u ubuntu -b -v
+  #         ansible-playbook -i inventory.ini playbook.yml --private-key ~/.ssh/id_rsa -u ubuntu -b -v
