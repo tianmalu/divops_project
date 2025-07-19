@@ -115,7 +115,7 @@ jobs:
         run: echo "${{ secrets.KUBECONFIG }}" > $HOME/.kube/config
 
       - name: Deploy Helm Chart with SHA tag
-        run: helm upgrade --install $RELEASE_NAME $HELM_CHART_PATH --namespace $KUBE_NAMESPACE --set client.image.repository=$IMAGE_REPOSITORY --set client.image.tag=$IMAGE_TAG --force --wait
+        run: helm upgrade --install $RELEASE_NAME $HELM_CHART_PATH --namespace $KUBE_NAMESPACE --set usersService.image.repository=$IMAGE_REPOSITORY --set usersService.image.tag=$IMAGE_TAG --force --wait
 
   # deploy-aws:
   #   name: Deploy To AWS EC2
