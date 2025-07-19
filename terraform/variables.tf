@@ -10,7 +10,7 @@ variable "instance_type" {
 
 variable "key_name" {
   description = "Key pair name in AWS"
-  default = "ec2"
+  default = "vockey"
   
 }
 
