@@ -11,5 +11,9 @@ public interface DiscussionsRepository extends JpaRepository<Discussion, Long> {
 
     List<Discussion> findByUserId(Long userId);
 
+    List<Discussion> findByUserIdOrderByCreatedAtDesc(Long userId);
+
     Optional<Discussion> findByName(String name);
+
+    Optional<Discussion> findByUserIdAndId(Long userId, Long id);
 }

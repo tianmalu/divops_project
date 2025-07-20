@@ -4,7 +4,7 @@
  */
 
 export interface paths {
-    "/api/discussions/discussion": {
+    "/api/discussions/question": {
         parameters: {
             query?: never;
             header?: never;
@@ -12,6 +12,24 @@ export interface paths {
             cookie?: never;
         };
         get?: never;
+        put?: never;
+        /** Create a new question */
+        post: operations["createQuestion"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/discussions/discussion": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get discussion details */
+        get: operations["getDiscussionDetails"];
         put?: never;
         /** Create a new discussion */
         post: operations["createDiscussion"];
@@ -38,13 +56,61 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/discussions/discussions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get user discussions */
+        get: operations["getUserDiscussions"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
+        QuestionCreateRequest: {
+            discussionId: string;
+            text: string;
+        };
         DiscussionCreateRequest: {
             name: string;
             text: string;
+        };
+        /** @description List of discussions */
+        DiscussionDTO: {
+            /** Format: int64 */
+            id: number;
+            name: string;
+            /** Format: int64 */
+            userId: number;
+            createdAt: string;
+        };
+        DiscussionsResponse: {
+            /** @description List of discussions */
+            data: components["schemas"]["DiscussionDTO"][];
+        };
+        DiscussionDetailsResponse: {
+            /** @description List of questions */
+            questions: components["schemas"]["QuestionDTO"][];
+        };
+        /** @description List of questions */
+        QuestionDTO: {
+            /** Format: int64 */
+            id: number;
+            text: string;
+            fromUser: boolean;
+            /** Format: int64 */
+            discussionId: number;
+            createdAt: string;
         };
     };
     responses: never;
@@ -55,6 +121,66 @@ export interface components {
 }
 export type $defs = Record<string, never>;
 export interface operations {
+    createQuestion: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["QuestionCreateRequest"];
+            };
+        };
+        responses: {
+            /** @description Question created successfully */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": Record<string, never>;
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    getDiscussionDetails: {
+        parameters: {
+            query: {
+                discussionId: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successfully fetched discussion */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["DiscussionDetailsResponse"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
     createDiscussion: {
         parameters: {
             query?: never;
@@ -103,6 +229,33 @@ export interface operations {
                 content: {
                     "*/*": string;
                 };
+            };
+        };
+    };
+    getUserDiscussions: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successfully fetched discussions */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["DiscussionsResponse"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
         };
     };
