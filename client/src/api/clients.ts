@@ -1,7 +1,8 @@
 import createClient, { type Middleware } from "openapi-fetch";
 import type { paths as usersServicePaths } from "../../users_service_types";
 
-const VITE_USERS_SERVICE_API_BASE_URL =  import.meta.env.VITE_USERS_SERVICE_API_BASE_URL
+const VITE_USERS_SERVICE_API_BASE_URL = import.meta.env
+	.VITE_USERS_SERVICE_API_BASE_URL;
 
 const myMiddleware: Middleware = {
 	async onRequest({ request }) {

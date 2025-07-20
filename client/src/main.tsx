@@ -12,9 +12,9 @@ const theme = createTheme({});
 const queryClient = new QueryClient({
 	defaultOptions: {
 		queries: {
-			refetchOnWindowFocus: false
-		}
-	}
+			refetchOnWindowFocus: false,
+		},
+	},
 });
 
 // biome-ignore lint/style/noNonNullAssertion: no reason
