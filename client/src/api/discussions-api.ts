@@ -32,7 +32,7 @@ export function useGetDiscussionDetails({
 	discussionId,
 }: UseGetDiscussionDetailsProps) {
 	return useQuery({
-		queryKey: [DiscussionsQueryKeys.GET_DISCUSSION_DETAILS,{discussionId}],
+		queryKey: [DiscussionsQueryKeys.GET_DISCUSSION_DETAILS, { discussionId }],
 		enabled: !!discussionId,
 		queryFn: async () => {
 			const res = await discussionsClient.GET("/api/discussions/discussion", {

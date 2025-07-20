@@ -138,9 +138,7 @@ const DiscussionMessages = () => {
 	const discussionId = searchParams.get("discussionId");
 	const queryClient = useQueryClient();
 	const addQuestionMutation = useAddQuestionMutation();
-	console.log(discussionId);
 	const { data, isLoading } = useGetDiscussionDetails({ discussionId });
-	console.log(data);
 	const questions = data?.questions || [];
 	const cards = (data?.cards || "").split(",");
 
@@ -166,7 +164,7 @@ const DiscussionMessages = () => {
 			queryClient.invalidateQueries({
 				queryKey: [DiscussionsQueryKeys.GET_DISCUSSION_DETAILS],
 			});
-			form.reset()
+			form.reset();
 		} catch (e) {
 			let message = "Unknown error";
 
@@ -192,7 +190,7 @@ const DiscussionMessages = () => {
 			}}
 		>
 			<Group grow pb="xs">
-				{cards.map((c)=>(
+				{cards.map((c) => (
 					<TarotCard key={c} cardName={c} />
 				))}
 			</Group>
@@ -205,8 +203,7 @@ const DiscussionMessages = () => {
 					{questions.map((q) => {
 						return <Message key={q.id.toString()} question={q} />;
 					})}
-					{addQuestionMutation.isPending &&
-					<Loader type="dots" />}
+					{addQuestionMutation.isPending && <Loader type="dots" />}
 				</Box>
 			)}
 			<Stack flex={1}>
