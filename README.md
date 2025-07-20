@@ -1,4 +1,4 @@
-Website: https://team-divops-devops25.student.k8s.aet.cit.tum.de
+Website: https://team-divops-devops25.student.k8s.aet.cit.tum.de/main
 
 Genai API: https://team-divops-devops25.student.k8s.aet.cit.tum.de/genai/health
 
