@@ -25,7 +25,7 @@ jobs:
   #       with:
   #         version: latest
   #     - name: Run Biome
-  #       working-directory: ./new_server
+  #       working-directory: ./server
   #       run: biome ci .
 
 
@@ -79,7 +79,7 @@ jobs:
         run: echo "IMAGE_TAG=$(echo $GITHUB_SHA | cut -c1-7)" >> $GITHUB_OUTPUT
 
       - name: Build users service Docker image with both tags
-        run: docker build -f ./new_server/users/Dockerfile.prod -t ${{ env.IMAGE_REPOSITORY }}:latest -t ${{ env.IMAGE_REPOSITORY }}:${{ steps.set-tag.outputs.image_tag }} ./new_server/users
+        run: docker build -f ./server/users/Dockerfile.prod -t ${{ env.IMAGE_REPOSITORY }}:latest -t ${{ env.IMAGE_REPOSITORY }}:${{ steps.set-tag.outputs.image_tag }} ./server/users
 
       - name: Push latest tag
         run: docker push ${{ env.IMAGE_REPOSITORY }}:latest

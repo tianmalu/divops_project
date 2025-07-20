@@ -56,10 +56,10 @@ services:
   users-service:
     container_name: users-service
     build:
-      context: ./new_server/users
+      context: ./server/users
       dockerfile: Dockerfile.dev
     volumes:
-      - ./new_server/users/src:/app/src
+      - ./server/users/src:/app/src
     stdin_open: true
     tty: true
     ports:
@@ -94,10 +94,10 @@ services:
   discussions-service:
     container_name: discussions-service
     build:
-      context: ./new_server/discussions
+      context: ./server/discussions
       dockerfile: Dockerfile.dev
     volumes:
-      - ./new_server/discussions/src:/app/src
+      - ./server/discussions/src:/app/src
     stdin_open: true
     tty: true
     ports:
