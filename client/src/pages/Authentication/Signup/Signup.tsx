@@ -71,7 +71,7 @@ const Signup = () => {
 					<Title ta="center">Hello!</Title>
 
 					<Text ta="center">
-						Already have an account? <Anchor href="login">Login</Anchor>
+						Already have an account? <Anchor href="signin">Login</Anchor>
 					</Text>
 				</Stack>
 				<Paper withBorder shadow="sm" p={22} mt={30} radius="md">
