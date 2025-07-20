@@ -114,6 +114,18 @@ jobs:
       - name: Configure kubeconfig
         run: echo "${{ secrets.KUBECONFIG }}" > $HOME/.kube/config
 
+      # Deploy DB
+      - name: Add Bitnami Helm repo
+        run: |
+          helm repo add bitnami https://charts.bitnami.com/bitnami
+          helm repo update
+
+      - name: Deploy PostgreSQL with Helm
+        run: |
+          helm upgrade --install users-service-db bitnami/postgresql \
+            --namespace users-service --create-namespace \
+            -f ./k8s/users-service-db-values.yaml
+      # Deploy App
       - name: Deploy Helm Chart with SHA tag
         run: helm upgrade --install $RELEASE_NAME $HELM_CHART_PATH --namespace $KUBE_NAMESPACE --set usersService.image.repository=$IMAGE_REPOSITORY --set usersService.image.tag=$IMAGE_TAG --force --wait
 

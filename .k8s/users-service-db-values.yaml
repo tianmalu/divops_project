@@ -1,0 +1,15 @@
+global:
+  postgresql:
+    auth:
+      username: users_db_username
+      password: users_db_password
+      database: users_db
+
+primary:
+  persistence:
+    enabled: true
+    size: 10Gi
+  resources:
+    limits:
+      cpu: 500m
+      memory: 512Mi
