@@ -4,7 +4,7 @@ import "@testing-library/jest-dom";
 
 function TestComponent() {
 	const navigate = useNavigate();
-	return <button onClick={() => navigate("/")}>Go Home</button>;
+	return <button type="button" onClick={() => navigate("/")}>Go Home</button>;
 }
 
 test("navigate works", () => {
