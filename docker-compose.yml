@@ -18,7 +18,7 @@ services:
     stdin_open: true
     tty: true
 
-    genai:
+  genai:
     container_name: genai
     build: 
       context: ./genai
