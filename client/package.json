@@ -10,7 +10,6 @@
     "preview": "vite preview",
     "start": "vite",
     "test": "vitest",
-
     "test:watch": "jest --watch",
     "test:coverage": "jest --coverage",
     "generate_users_service_openapi_types": "npx openapi-typescript http://localhost:8081/v3/api-docs --output users_service_types.d.ts",

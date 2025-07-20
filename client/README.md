@@ -1,54 +1,98 @@
-# React + TypeScript + Vite
+# TarotAI Client
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+This is the frontend client for the TarotAI platform, built with **React**, **TypeScript**, and **Vite**. It provides a modern, responsive user interface for authentication, tarot card discussions, and user feeds, communicating with backend services via REST APIs.
 
-Currently, two official plugins are available:
+## Project Overview
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+- **Framework:** React 19 + Vite
+- **UI Library:** Mantine
+- **API Integration:** OpenAPI-generated clients for seamless backend communication
+- **Features:**
+  - User authentication (login/signup)
+  - Tarot card discussions and feeds
+  - Protected routes for authenticated users
+  - Responsive, dark-themed UI
 
-## Expanding the ESLint configuration
+## How It Works
 
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
+- The app uses React Router for navigation and Mantine for UI components and theming.
+- API requests are handled via OpenAPI clients, with JWT-based authentication.
+- The main pages include:
+  - **Login/Signup:** User authentication
+  - **User Dashboard:** Access to tarot discussions and feed
+  - **Discussions:** Start and follow tarot card discussions
+  - **Feed:** Infinite scrolling feed of posts/discussions
 
-```js
-export default tseslint.config({
-  extends: [
-    // Remove ...tseslint.configs.recommended and replace with this
-    ...tseslint.configs.recommendedTypeChecked,
-    // Alternatively, use this for stricter rules
-    ...tseslint.configs.strictTypeChecked,
-    // Optionally, add this for stylistic rules
-    ...tseslint.configs.stylisticTypeChecked,
-  ],
-  languageOptions: {
-    // other options...
-    parserOptions: {
-      project: ['./tsconfig.node.json', './tsconfig.app.json'],
-      tsconfigRootDir: import.meta.dirname,
-    },
-  },
-})
+
+To start developing, create `.env.development` file and make sure it contains
+
+- The app will be available at [http://localhost:3000](http://localhost:3000).
+- By default, it expects backend services to be running and accessible via environment variables.
+
+
+#### Development
+
+A development Dockerfile and .env is provided:
+
+```bash
+docker build -f Dockerfile.dev -t tarotai-client-dev .
+docker run -p 3000:3000 tarotai-client-dev
 ```
 
-You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
+#### Production
 
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
+A production-ready image serves the built app via Nginx:
 
-export default tseslint.config({
-  plugins: {
-    // Add the react-x and react-dom plugins
-    'react-x': reactX,
-    'react-dom': reactDom,
-  },
-  rules: {
-    // other rules...
-    // Enable its recommended typescript rules
-    ...reactX.configs['recommended-typescript'].rules,
-    ...reactDom.configs.recommended.rules,
-  },
-})
+```bash
+docker build -f Dockerfile.prod -t tarotai-client .
+docker run -p 80:80 tarotai-client
 ```
+
+### Kubernetes (Helm)
+
+A Helm chart is available under `helm/divops/client/` for deploying to Kubernetes:
+
+```bash
+cd helm/divops
+helm install client ./client
+```
+
+- See `helm/divops/client/values.yaml` for configuration options.
+
+### AWS (Terraform/Ansible)
+
+To deploy to AWS, set the `RUN_AWS_DEPLOYMENT` in the Github variables to `true` to make the job required for the deployment to work. This flag was implemented as the tokens and access keys change in the lab. Then, in the secrets, update these values with your account's info
+
+- `AWS_ACCESS_KEY_ID`
+- `AWS_SECRET_ACCESS_KEY`
+- `AWS_SESSION_TOKEN`
+
+Then, in the AWS EC2, create a key pair and name it `ec2`. Download the private key from AWS and add it in this secret
+
+- `AWS_EC2_SSH_PRIVATE_KEY`
+
+Run the pipeline and it will deploy the client to a newly created instance and print its ip address
+
+
+## Environment Variables
+
+The client expects the following environment variables (typically set via `.env`):
+
+- `VITE_USERS_SERVICE_API_BASE_URL`
+- `VITE_DISCUSSIONS_SERVICE_API_BASE_URL`
+
+
+### Linting
+
+Linting is done used `biome.js`
+It is also in the CI/CD pipeline
+
+To run, use the configured command: `npm run lint`
+
+
+###  Testing
+
+Testing is done using vitest and all necessary setup is configured
+
+To run, use: `npm test`
+
