@@ -23,4 +23,7 @@ public class Discussion {
     @CreationTimestamp
     @Column(name = "created_at", updatable = false)
     private LocalDateTime createdAt;
+
+    @Column(nullable = true)
+    private String cards;
 }

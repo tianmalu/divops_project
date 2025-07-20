@@ -142,6 +142,7 @@ const DiscussionMessages = () => {
 	const { data, isLoading } = useGetDiscussionDetails({ discussionId });
 	console.log(data);
 	const questions = data?.questions || [];
+	const cards = (data?.cards || "").split(",");
 
 	const form = useForm<AddQuestionForm>({
 		mode: "uncontrolled",
@@ -190,10 +191,10 @@ const DiscussionMessages = () => {
 				flexDirection: "column",
 			}}
 		>
-			<Group grow>
-				<TarotCard cardNumber="0" />
-				<TarotCard cardNumber="1" />
-				<TarotCard cardNumber="2" />
+			<Group grow pb="xs">
+				{cards.map((c)=>(
+					<TarotCard key={c} cardName={c} />
+				))}
 			</Group>
 			{isLoading ? (
 				<Center>

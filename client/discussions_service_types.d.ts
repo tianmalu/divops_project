@@ -101,6 +101,8 @@ export interface components {
         DiscussionDetailsResponse: {
             /** @description List of questions */
             questions: components["schemas"]["QuestionDTO"][];
+            /** @description Cards */
+            cards: string;
         };
         /** @description List of questions */
         QuestionDTO: {

@@ -2,7 +2,8 @@ CREATE TABLE discussions (
     id SERIAL PRIMARY KEY,
     name TEXT NOT NULL,
     user_id BIGINT NOT NULL,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    cards TEXT
 );
 
 

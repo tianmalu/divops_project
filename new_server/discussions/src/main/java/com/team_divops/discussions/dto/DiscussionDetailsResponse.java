@@ -10,8 +10,13 @@ public class DiscussionDetailsResponse {
     @Schema(description = "List of questions", nullable = false)
     private List<QuestionDTO> questions;
 
-    public DiscussionDetailsResponse(List<QuestionDTO> questions) {
+    @NotBlank(message = "Cards Required")
+    @Schema(description = "Cards", nullable = false)
+    private String cards;
+
+    public DiscussionDetailsResponse(List<QuestionDTO> questions, String cards) {
         this.questions = questions;
+        this.cards = cards;
     }
 
     public List<QuestionDTO> getQuestions() {
@@ -21,4 +26,13 @@ public class DiscussionDetailsResponse {
     public void setQuestions(List<QuestionDTO> questions) {
         this.questions = questions;
     }
+
+    public String getCards(){
+        return cards;
+    }
+
+    public void setCards(String cards) {
+        this.cards = cards;
+    }
 }
+
