@@ -3,13 +3,24 @@ import { fireEvent, render, screen } from "@testing-library/react";
 import { BrowserRouter } from "react-router-dom";
 import Login from "./Login";
 import "@testing-library/jest-dom";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 
-const theme = createTheme({});
+
 
 // Helper to render with router context
 const renderWithRouter = (ui: React.ReactElement) => {
+	const theme = createTheme({});
+const queryClient = new QueryClient({
+	defaultOptions: {
+		queries: {
+			refetchOnWindowFocus: false,
+		},
+	},
+});
+
 	return render(
 		<BrowserRouter>
+		<QueryClientProvider client={queryClient}>
 			<MantineProvider
 				forceColorScheme="dark"
 				defaultColorScheme="dark"
@@ -17,6 +28,7 @@ const renderWithRouter = (ui: React.ReactElement) => {
 			>
 				{ui}
 			</MantineProvider>
+			</QueryClientProvider>
 		</BrowserRouter>,
 	);
 };
