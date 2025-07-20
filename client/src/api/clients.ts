@@ -1,8 +1,12 @@
 import createClient, { type Middleware } from "openapi-fetch";
+import type { paths as discussionsServicePaths } from "../../discussions_service_types";
 import type { paths as usersServicePaths } from "../../users_service_types";
 
 const VITE_USERS_SERVICE_API_BASE_URL = import.meta.env
 	.VITE_USERS_SERVICE_API_BASE_URL;
+
+const VITE_DISCUSSIONS_SERVICE_API_BASE_URL = import.meta.env
+	.VITE_DISCUSSIONS_SERVICE_API_BASE_URL;
 
 const myMiddleware: Middleware = {
 	async onRequest({ request }) {
@@ -41,3 +45,10 @@ export const usersClient = createClient<usersServicePaths>({
 
 usersClient.use(myMiddleware);
 export type usersSchema = usersServicePaths;
+
+export const discussionsClient = createClient<discussionsServicePaths>({
+	baseUrl: VITE_DISCUSSIONS_SERVICE_API_BASE_URL || "",
+});
+
+discussionsClient.use(myMiddleware);
+export type discussionsSchema = discussionsServicePaths;

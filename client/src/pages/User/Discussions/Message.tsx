@@ -1,26 +1,23 @@
 import { Box, Container, Group, Text, useMantineTheme } from "@mantine/core";
+import type { Question } from "../../../api/discussions-api";
 
 interface MessageProps {
-	message: {
-		id: string;
-		from: string;
-		text: string;
-	};
+	question: Question;
 }
 
 const Message = (props: MessageProps) => {
-	const { message } = props;
+	const { question } = props;
 	const theme = useMantineTheme();
 	return (
 		<Container fluid p="xs">
-			<Group justify={message.from === "user" ? "flex-end" : "flex-start"}>
+			<Group justify={question.fromUser ? "flex-end" : "flex-start"}>
 				<Box
 					p="md"
 					maw="70%"
 					bg="gray"
 					style={{ borderRadius: theme.radius.lg }}
 				>
-					<Text size="sm">{message.text}</Text>
+					<Text size="sm">{question.text}</Text>
 				</Box>
 			</Group>
 		</Container>

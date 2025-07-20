@@ -15,47 +15,22 @@ import {
 	Title,
 	useMantineTheme,
 } from "@mantine/core";
+import { isNotEmpty, useForm } from "@mantine/form";
 import { useDisclosure } from "@mantine/hooks";
+import { notifications } from "@mantine/notifications";
 import { IconEdit, IconPlus } from "@tabler/icons-react";
+import { useQueryClient } from "@tanstack/react-query";
 import { useSearchParams } from "react-router-dom";
+import {
+	type Discussion,
+	DiscussionsQueryKeys,
+	useAddQuestionMutation,
+	useGetDiscussionDetails,
+	useGetDiscussions,
+} from "../../../api/discussions-api";
 import AddDiscussionModal from "./AddDiscussionModal";
 import Message from "./Message";
 import TarotCard from "./TarotCard";
-
-const discussions = [
-	{ id: "1", title: "discussion long long long 1" },
-	{ id: "2", title: "discussion 2" },
-	{ id: "3", title: "discussion 3" },
-	{ id: "4", title: "discussion 4" },
-	{ id: "5", title: "discussion 5" },
-	{ id: "6", title: "discussion long long long 1" },
-	{ id: "7", title: "discussion 2" },
-	{ id: "8", title: "discussion 3" },
-	{ id: "9", title: "discussion 4" },
-	{ id: "10", title: "discussion 5" },
-	{ id: "11", title: "discussion 5" },
-	{ id: "12", title: "discussion 5" },
-	{ id: "13", title: "discussion 5" },
-	{ id: "14", title: "discussion 5" },
-	{ id: "15", title: "discussion 5" },
-	{ id: "16", title: "discussion 5" },
-	{ id: "17", title: "discussion 5" },
-	{ id: "18", title: "discussion 5" },
-];
-
-const messages = [
-	{
-		id: "1",
-		from: "user",
-		text: "text from  usertext from  usertext from  usertext from  usertext from  usertext from  usertext from  usertext from  usertext from  usertext from  usertext from  usertext from  usertext from  user",
-	},
-	{ id: "2", from: "ai", text: "this is a reply from the ai agent " },
-	{ id: "3", from: "user", text: "text from  user" },
-	{ id: "4", from: "ai", text: "text from  user" },
-	{ id: "5", from: "user", text: "text from  user" },
-	{ id: "6", from: "ai", text: "text from  user" },
-	{ id: "7", from: "user", text: "text from  user" },
-];
 
 interface DiscussionsListProps {
 	openModal: VoidFunction;
@@ -64,12 +39,12 @@ interface DiscussionsListProps {
 const DiscussionsList = (props: DiscussionsListProps) => {
 	const { openModal } = props;
 	const theme = useMantineTheme();
+	const { data, isFetching } = useGetDiscussions();
 	const [searchParams, setSearchParams] = useSearchParams();
 	const discussionId = searchParams.get("discussionId");
 
-	const handleDiscussionClicked = (d: { id: string; title: string }) => {
-		console.log(d);
-		setSearchParams({ discussionId: d.id });
+	const handleDiscussionClicked = (d: Discussion) => {
+		setSearchParams({ discussionId: d.id.toString() });
 	};
 
 	return (
@@ -100,20 +75,32 @@ const DiscussionsList = (props: DiscussionsListProps) => {
 				}}
 			>
 				<ScrollArea dir="column" h={550} offsetScrollbars flex={1}>
-					<Stack>
-						{discussions.map((d) => (
-							<Button
-								onClick={() => handleDiscussionClicked(d)}
-								variant={discussionId === d.id ? "filled" : "subtle"}
-								key={d.id}
-								justify="flex-start"
-							>
-								<Text truncate="end" size="sm">
-									{d.title}
-								</Text>
-							</Button>
-						))}
-					</Stack>
+					{isFetching ? (
+						<Center>
+							<Loader size="lg" />
+						</Center>
+					) : !data?.data || data.data.length === 0 ? (
+						<Center>
+							<Text>No Discussions </Text>
+						</Center>
+					) : (
+						<Stack>
+							{data.data.map((d) => (
+								<Button
+									onClick={() => handleDiscussionClicked(d)}
+									variant={
+										discussionId === d.id.toString() ? "filled" : "subtle"
+									}
+									key={d.id}
+									justify="flex-start"
+								>
+									<Text truncate="end" size="sm">
+										{d.name}
+									</Text>
+								</Button>
+							))}
+						</Stack>
+					)}
 				</ScrollArea>
 			</Container>
 		</Stack>
@@ -142,10 +129,56 @@ const NoDiscussionSelected = (props: NoDiscussionSelectedProps) => {
 	);
 };
 
+interface AddQuestionForm {
+	text: string;
+}
+
 const DiscussionMessages = () => {
 	const [searchParams] = useSearchParams();
 	const discussionId = searchParams.get("discussionId");
-	console.log(discussionId);
+	const queryClient = useQueryClient();
+	const addQuestionMutation = useAddQuestionMutation();
+	const { data, isLoading } = useGetDiscussionDetails({ discussionId });
+	const questions = data?.questions || [];
+	const cards = (data?.cards || "").split(",");
+
+	const form = useForm<AddQuestionForm>({
+		mode: "uncontrolled",
+		initialValues: {
+			text: "",
+		},
+		validate: {
+			text: isNotEmpty("Text Required"),
+		},
+	});
+
+	const addQuestion = async (values: AddQuestionForm) => {
+		try {
+			await addQuestionMutation.mutateAsync({
+				body: {
+					discussionId: discussionId || "",
+					text: values.text,
+				},
+			});
+
+			queryClient.invalidateQueries({
+				queryKey: [DiscussionsQueryKeys.GET_DISCUSSION_DETAILS],
+			});
+			form.reset();
+		} catch (e) {
+			let message = "Unknown error";
+
+			if (e instanceof Error) {
+				message = e.message;
+			}
+			notifications.show({
+				title: "Error adding a new message",
+				message: message || "",
+				color: "red",
+				position: "top-right",
+			});
+		}
+	};
 
 	return (
 		<Container
@@ -156,29 +189,40 @@ const DiscussionMessages = () => {
 				flexDirection: "column",
 			}}
 		>
-			<Group grow>
-				<TarotCard cardNumber="0" />
-				<TarotCard cardNumber="1" />
-				<TarotCard cardNumber="2" />
+			<Group grow pb="xs">
+				{cards.map((c) => (
+					<TarotCard key={c} cardName={c} />
+				))}
 			</Group>
-			<Box style={{ overflowY: "scroll" }}>
-				{messages.map((m) => {
-					return <Message key={m.id} message={m} />;
-				})}
-				<Loader type="dots" />
-			</Box>
+			{isLoading ? (
+				<Center>
+					<Loader size="lg" />
+				</Center>
+			) : (
+				<Box style={{ overflowY: "scroll" }}>
+					{questions.map((q) => {
+						return <Message key={q.id.toString()} question={q} />;
+					})}
+					{addQuestionMutation.isPending && <Loader type="dots" />}
+				</Box>
+			)}
 			<Stack flex={1}>
-				<Group grow mb="xs">
-					<TextInput
-						radius="md"
-						placeholder="Write a message..."
-						rightSection={
-							<ActionIcon>
-								<IconPlus />
-							</ActionIcon>
-						}
-					/>
-				</Group>
+				<form onSubmit={form.onSubmit(addQuestion)}>
+					<Group grow mb="xs">
+						<TextInput
+							key={form.key("text")}
+							{...form.getInputProps("text")}
+							disabled={isLoading || addQuestionMutation.isPending}
+							radius="md"
+							placeholder="Write a message..."
+							rightSection={
+								<ActionIcon>
+									<IconPlus />
+								</ActionIcon>
+							}
+						/>
+					</Group>
+				</form>
 			</Stack>
 		</Container>
 	);

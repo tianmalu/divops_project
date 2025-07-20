@@ -1,0 +1,29 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: team-divops-discussions-service 
+  namespace: "discussions-service"
+spec:
+  replicas: {{ .Values.discussionsService.replicaCount }}
+  selector:
+    matchLabels:
+      app: team-divops-discussions-service
+  template:
+    metadata:
+      labels:
+        app: team-divops-discussions-service
+    spec:
+      containers:
+        - name: discussions-service
+          image: "{{ .Values.discussionsService.image.repository }}:{{ .Values.discussionsService.image.tag }}"
+          imagePullPolicy: {{ .Values.discussionsService.image.pullPolicy }}
+          resources:
+            limits:
+              cpu: "500m"
+              memory: "256Mi"
+            requests:
+              cpu: "50m"
+              memory: "50Mi"
+          ports:
+            - containerPort: {{ .Values.discussionsService.service.targetPort }}
+
