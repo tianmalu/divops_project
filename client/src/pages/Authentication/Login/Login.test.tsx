@@ -1,24 +1,20 @@
 import { render, screen } from "@testing-library/react";
 import { MemoryRouter, useNavigate } from "react-router-dom";
-import '@testing-library/jest-dom';
+import "@testing-library/jest-dom";
 
 function TestComponent() {
-  const navigate = useNavigate();
-  return <button onClick={() => navigate("/")}>Go Home</button>;
+	const navigate = useNavigate();
+	return <button onClick={() => navigate("/")}>Go Home</button>;
 }
 
-
 test("navigate works", () => {
-  render(
-    <MemoryRouter>
-      <TestComponent />
-    </MemoryRouter>
-  );
-  expect(screen.getByRole("button")).toBeInTheDocument();
+	render(
+		<MemoryRouter>
+			<TestComponent />
+		</MemoryRouter>,
+	);
+	expect(screen.getByRole("button")).toBeInTheDocument();
 });
-
-
-
 
 // import { createTheme, MantineProvider } from "@mantine/core";
 // import { fireEvent, render, screen } from "@testing-library/react";
@@ -26,7 +22,6 @@ test("navigate works", () => {
 // import Login from "./Login";
 // import "@testing-library/jest-dom";
 // import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-
 
 // // Helper to render with router context
 // const renderWithRouter = (ui: React.ReactElement) => {
