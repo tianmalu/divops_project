@@ -56,9 +56,49 @@ services:
       - users-db
     networks:
       - app-network
+  # --------------- Discussions Microservice DB + Service
+  # Discussions DB
+  discussions-db:
+    image: postgres:16
+    container_name: discussions-db
+    environment:
+      POSTGRES_DB: discussions_db
+      POSTGRES_USER: discussions_db_username
+      POSTGRES_PASSWORD: discussions_db_password
+    ports:
+      - "5433:5432"
+    volumes:
+      - discussions_db_data:/var/lib/postgresql/data
+    networks:
+      - app-network
+  # Discussions Microservice
+  discussions-service:
+    container_name: discussions-service
+    build:
+      context: ./new_server/discussions
+      dockerfile: Dockerfile.dev
+    volumes:
+      - ./new_server/discussions/src:/app/src
+    stdin_open: true
+    tty: true
+    ports:
+      - "8082:8080"
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://discussions-db:5432/discussions_db
+      SPRING_DATASOURCE_USERNAME: discussions_db_username
+      SPRING_DATASOURCE_PASSWORD: discussions_db_password
+      SPRING_PROFILES_ACTIVE: dev
+      SPRING_DEVTOOLS_RESTART_ENABLED: true
+      SPRING_DEVTOOLS_RESTART_POLLING: true
+    depends_on:
+      - discussions-db
+    networks:
+      - app-network
+
 
 volumes:
   users_db_data:
+  discussions_db_data:
 
 networks:
   app-network:

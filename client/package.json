@@ -13,7 +13,9 @@
 
     "test:watch": "jest --watch",
     "test:coverage": "jest --coverage",
-    "generate-openapi-types": "npx openapi-typescript http://localhost:8081/v3/api-docs --output users_service_types.d.ts"
+    "generate_users_service_openapi_types": "npx openapi-typescript http://localhost:8081/v3/api-docs --output users_service_types.d.ts",
+    "generate_discussions_service_openapi_types": "npx openapi-typescript http://localhost:8082/v3/api-docs --output discussions_service_types.d.ts",
+    "generate-openapi-types": "npm run generate_users_service_openapi_types && npm run generate_discussions_service_openapi_types"
   },
   "dependencies": {
     "@mantine/core": "^8.0.1",

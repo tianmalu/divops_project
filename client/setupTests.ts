@@ -4,7 +4,8 @@ import { vi } from 'vitest';
 
 Object.defineProperty(import.meta, 'env', {
   value: {
-    VITE_USERS_SERVICE_API_BASE_URL: 'http://mocked-url.com/'
+    VITE_USERS_SERVICE_API_BASE_URL: 'http://mocked-url.com/',
+        VITE_DISCUSSIONS_SERVICE_API_BASE_URL: 'http://mocked-url.com/'
   }
 });
 
