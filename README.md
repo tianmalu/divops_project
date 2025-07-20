@@ -115,13 +115,6 @@ cd client
 npm test
 ```
 
-### Server Testing
-```
-# Go to testing dir
-cd server
-# Run all unittest 
-```
-
 ### GenAI Testing
 ```
 # Go to testing dir
