@@ -1,31 +1,15 @@
-FROM gradle:8.0-jdk17 AS build
-
+# Stage 1: Build the application
+FROM gradle:8.0.2-jdk17 AS build
 WORKDIR /app
+COPY --chown=gradle:gradle . .
+RUN gradle clean bootJar --no-daemon
 
-# Copy gradle wrapper and build files
-COPY gradlew .
-COPY gradlew.bat .
-COPY build.gradle .
-COPY settings.gradle .
-COPY gradle gradle
-
-# Copy source code
-COPY src src
-
-RUN chmod +x gradlew
-
-# Build the application
-RUN ./gradlew build -x test --no-daemon
-
-# Production stage
-FROM openjdk:17-jre-slim
-
+# Stage 2: Create the runtime image
+FROM eclipse-temurin:17-jre-alpine
 WORKDIR /app
-
-# Copy the built jar from the build stage
 COPY --from=build /app/build/libs/*.jar app.jar
 
-# Expose the application port
+# Expose the port your Spring Boot app runs on
 EXPOSE 8080
 
 # Run the application
