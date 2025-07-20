@@ -1,6 +1,8 @@
 import createClient, { type Middleware } from "openapi-fetch";
 import type { paths as usersServicePaths } from "../../users_service_types";
 
+const VITE_USERS_SERVICE_API_BASE_URL =  import.meta.env.VITE_USERS_SERVICE_API_BASE_URL
+
 const myMiddleware: Middleware = {
 	async onRequest({ request }) {
 		const token = localStorage.getItem("token");
@@ -32,9 +34,8 @@ const myMiddleware: Middleware = {
 	},
 };
 
-// TODO change to actual route based on url
 export const usersClient = createClient<usersServicePaths>({
-	baseUrl: "http://localhost:8081/",
+	baseUrl: VITE_USERS_SERVICE_API_BASE_URL || "",
 });
 
 usersClient.use(myMiddleware);
