@@ -205,7 +205,8 @@ const DiscussionMessages = () => {
 					{questions.map((q) => {
 						return <Message key={q.id.toString()} question={q} />;
 					})}
-					<Loader type="dots" />
+					{addQuestionMutation.isPending &&
+					<Loader type="dots" />}
 				</Box>
 			)}
 			<Stack flex={1}>

@@ -8,6 +8,8 @@ import com.team_divops.discussions.dto.DiscussionDetailsRequest;
 import com.team_divops.discussions.dto.DiscussionDetailsResponse;
 import com.team_divops.discussions.dto.DiscussionStartResponseDto;
 import com.team_divops.discussions.dto.DiscussionStartDTO;
+import com.team_divops.discussions.dto.DiscussionFollowupResponseDTO;
+import com.team_divops.discussions.dto.DiscussionFollowupDTO;
 import com.team_divops.discussions.dto.LoginResponse;
 import com.team_divops.discussions.dto.QuestionDTO;
 import com.team_divops.discussions.dto.SuccessResponse;
@@ -115,9 +117,6 @@ public class DiscussionsController {
                         newquestion.setFromUser(false);
                         questionsRepository.save(newquestion);
 
-
-   
-
             // return ResponseEntity.ok(response.getBody());
         } catch (RestClientException e) {
             System.out.println(e);
@@ -151,6 +150,48 @@ public class DiscussionsController {
         question.setDiscussion(discussion);
         question.setFromUser(true);
         questionsRepository.save(question);
+
+                try {
+            // Create the DTO with your actual data
+            DiscussionFollowupDTO requestDto = new DiscussionFollowupDTO(
+                question.getText()
+            );
+
+            // Prepare headers
+            HttpHeaders headers = new HttpHeaders();
+            headers.setContentType(MediaType.APPLICATION_JSON);
+
+            // Wrap DTO and headers into HttpEntity
+            HttpEntity<DiscussionFollowupDTO> requestEntity = new HttpEntity<>(requestDto, headers);
+
+            // Send POST request with body
+            ResponseEntity<DiscussionFollowupResponseDTO> response = restTemplate.postForEntity(
+                    "https://team-divops-devops25.student.k8s.aet.cit.tum.de/genai/discussion/"+  discussion.getId().toString() +"/followup",
+                    requestEntity,
+                    DiscussionFollowupResponseDTO.class);
+
+                    DiscussionFollowupResponseDTO responseBody = response.getBody();
+                             System.out.println("------================================================----");
+            System.out.println(responseBody);
+
+
+                            Question newquestion = new Question();
+                        newquestion.setText(responseBody.getResponse());
+                        newquestion.setDiscussion(discussion);
+                        newquestion.setFromUser(false);
+                        questionsRepository.save(newquestion);
+
+            // return ResponseEntity.ok(response.getBody());
+        } catch (RestClientException e) {
+            System.out.println(e);
+            ErrorResponse error = new ErrorResponse("Error connecting to GenAI Service");
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(error);
+        }
+
+
+
+
+
 
         return ResponseEntity.ok(new SuccessResponse("Question created successfully"));
     }
