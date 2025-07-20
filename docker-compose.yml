@@ -17,3 +17,22 @@ services:
       WATCHPACK_POLLING: true
     stdin_open: true
     tty: true
+
+    genai:
+    container_name: genai
+    build: 
+      context: ./genai
+      dockerfile: Dockerfile
+    ports:
+      - "8000:8000"
+    env_file:
+      - ./genai/app/.env
+    volumes:
+      - ./genai:/app
+      - /app/node_modules
+    environment:
+      NODE_ENV: development
+      CHOKIDAR_USEPOLLING: true
+      WATCHPACK_POLLING: true
+    stdin_open: true
+    tty: true
