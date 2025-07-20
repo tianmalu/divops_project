@@ -2,7 +2,7 @@ name: Pipeline For Client Deployment
 
 on:
   push:
-    branches: [main, Init-users-microservice]
+    branches: [main]
 
 env:
   KUBE_NAMESPACE: client-app
