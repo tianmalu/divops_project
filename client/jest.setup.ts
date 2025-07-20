@@ -1,5 +1,11 @@
 import '@testing-library/jest-dom';
-import { TextEncoder, TextDecoder } from 'util';
+// import { TextEncoder, TextDecoder } from 'fast-text-encoding';
 
-(globalThis as any).TextEncoder = TextEncoder;
-(globalThis as any).TextDecoder = TextDecoder;
+// (global as any).TextEncoder = global.TextEncoder;
+// (global as any).TextDecoder = global.TextDecoder;
+
+Object.defineProperty(import.meta, 'env', {
+  value: {
+    VITE_USERS_SERVICE_API_BASE_URL: 'http://mocked-url.com'
+  }
+});

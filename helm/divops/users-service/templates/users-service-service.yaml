@@ -1,0 +1,13 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: team-divops-users-service
+  namespace: "users-service"
+spec:
+  selector:
+    app: team-divops-users-service
+  ports:
+    - port: {{ .Values.usersService.service.port }}
+      targetPort: {{ .Values.usersService.service.targetPort }}
+      protocol: TCP
+  type: {{ .Values.usersService.service.type }}
