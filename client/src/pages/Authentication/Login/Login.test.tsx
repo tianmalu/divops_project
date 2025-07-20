@@ -1,6 +1,6 @@
 import { createTheme, MantineProvider } from "@mantine/core";
 import { fireEvent, render, screen } from "@testing-library/react";
-import { BrowserRouter } from "react-router-dom";
+import { MemoryRouter  } from "react-router-dom";
 import Login from "./Login";
 import "@testing-library/jest-dom";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
@@ -17,7 +17,7 @@ const renderWithRouter = (ui: React.ReactElement) => {
 	});
 
 	return render(
-		<BrowserRouter>
+		<MemoryRouter >
 			<QueryClientProvider client={queryClient}>
 				<MantineProvider
 					forceColorScheme="dark"
@@ -27,7 +27,7 @@ const renderWithRouter = (ui: React.ReactElement) => {
 					{ui}
 				</MantineProvider>
 			</QueryClientProvider>
-		</BrowserRouter>,
+		</MemoryRouter >,
 	);
 };
 
@@ -54,26 +54,4 @@ describe("Login Component", () => {
 		expect(screen.getByText(/invalid email/i)).toBeInTheDocument();
 		expect(screen.getByText(/password required/i)).toBeInTheDocument();
 	});
-
-	// it("navigates on successful submit (mock)", () => {
-	// 	// Mock navigate
-	// 	const mockedNavigate = jest.fn();
-	// 	jest.mock("react-router", () => ({
-	// 		...jest.requireActual("react-router"),
-	// 		useNavigate: () => mockedNavigate
-	// 	}));
-
-	// 	renderWithRouter(<Login />);
-
-	// 	fireEvent.change(screen.getByLabelText(/email/i), {
-	// 		target: { value: "test@example.com" },
-	// 	});
-	// 	fireEvent.change(screen.getByLabelText(/password/i), {
-	// 		target: { value: "password123" },
-	// 	});
-	// 	fireEvent.click(screen.getByRole("button", { name: /sign in/i }));
-
-	// 	// This won't work directly unless you re-inject the mocked navigate
-	// 	// For a real test, you'd inject `navigate` as a prop or refactor
-	// });
 });
