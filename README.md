@@ -86,7 +86,7 @@ curl -s https://team-divops-devops25.student.k8s.aet.cit.tum.de
 
 Backend SwaggerUI: https://team-divops-devops25.student.k8s.aet.cit.tum.de
 
-GenAI SwaggerUI: https://team-divops-devops25.student.k8s.aet.cit.tum.de
+GenAI: [https://team-divops-devops25.student.k8s.aet.cit.tum.de](https://team-divops-devops25.student.k8s.aet.cit.tum.de/genai/docs)
 
 There are also detailed docs for GenAI API under ```/genai``` file.
 
