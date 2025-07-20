@@ -5,29 +5,27 @@ import Login from "./Login";
 import "@testing-library/jest-dom";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 
-
-
 // Helper to render with router context
 const renderWithRouter = (ui: React.ReactElement) => {
 	const theme = createTheme({});
-const queryClient = new QueryClient({
-	defaultOptions: {
-		queries: {
-			refetchOnWindowFocus: false,
+	const queryClient = new QueryClient({
+		defaultOptions: {
+			queries: {
+				refetchOnWindowFocus: false,
+			},
 		},
-	},
-});
+	});
 
 	return render(
 		<BrowserRouter>
-		<QueryClientProvider client={queryClient}>
-			<MantineProvider
-				forceColorScheme="dark"
-				defaultColorScheme="dark"
-				theme={theme}
-			>
-				{ui}
-			</MantineProvider>
+			<QueryClientProvider client={queryClient}>
+				<MantineProvider
+					forceColorScheme="dark"
+					defaultColorScheme="dark"
+					theme={theme}
+				>
+					{ui}
+				</MantineProvider>
 			</QueryClientProvider>
 		</BrowserRouter>,
 	);
