@@ -58,7 +58,7 @@ const Signup = () => {
 				message: "You can now Log in",
 				position: "top-right",
 			});
-			navigate("/login");
+			navigate("/signin");
 		} catch {
 			// Nothing
 		}

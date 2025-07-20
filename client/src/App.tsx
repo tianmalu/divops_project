@@ -9,7 +9,7 @@ import "./api/clients";
 
 const ProtectedRoute = () => {
 	const token = localStorage.getItem("token");
-	return token ? <Outlet /> : <Navigate to="/login" replace />;
+	return token ? <Outlet /> : <Navigate to="/signin" replace />;
 };
 
 const App = () => {
@@ -19,7 +19,7 @@ const App = () => {
 		<Container fluid w={"100%"} h={"100%"} p={0} m={0}>
 			<Routes>
 				<Route path="/" element={<h1>Main Page: Deployment Working</h1>} />
-				<Route path="/login" element={<Login />} />
+				<Route path="/signin" element={<Login />} />
 				<Route path="/signup" element={<Signup />} />
 				<Route element={<ProtectedRoute />}>
 					<Route path="/main" element={<UserDashboard />}>
