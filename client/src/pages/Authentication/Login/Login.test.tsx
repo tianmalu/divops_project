@@ -1,6 +1,6 @@
 import { createTheme, MantineProvider } from "@mantine/core";
 import { fireEvent, render, screen } from "@testing-library/react";
-import { MemoryRouter  } from "react-router-dom";
+import { MemoryRouter } from "react-router-dom";
 import Login from "./Login";
 import "@testing-library/jest-dom";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
@@ -17,7 +17,7 @@ const renderWithRouter = (ui: React.ReactElement) => {
 	});
 
 	return render(
-		<MemoryRouter >
+		<MemoryRouter>
 			<QueryClientProvider client={queryClient}>
 				<MantineProvider
 					forceColorScheme="dark"
@@ -27,7 +27,7 @@ const renderWithRouter = (ui: React.ReactElement) => {
 					{ui}
 				</MantineProvider>
 			</QueryClientProvider>
-		</MemoryRouter >,
+		</MemoryRouter>,
 	);
 };
 
